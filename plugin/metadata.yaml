@@ -1,8 +1,8 @@
-name: astrbot_plugin_dafeiyu_phone
+name: astrbot_plugin_shengjian
 display_name: 我的圣剑
 desc: 让 AstrBot 通过 QQ 远程操控安卓手机：截图看界面、点击滑动、输入文字、打开应用。手机端用 AutoX.js 执行，不需要 root。
 short_desc: QQ 远程操控安卓手机
 version: 0.2.0
-author: dafeiyu
-repo: "https://github.com/USERNAME/astrbot_plugin_dafeiyu_phone"
+author: 我的圣剑
+repo: "https://github.com/USERNAME/astrbot_plugin_shengjian"
 astrbot_version: ">=4.29.0"

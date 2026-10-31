@@ -1,4 +1,4 @@
-# 我的圣剑（dafeiyu-phone-bridge）
+# 我的圣剑（shengjian-phone-bridge）
 
 让 QQ 上的「大肥鱼」远程操控你的 Android 手机。**唯一的大脑是 AstrBot 里的模型，手机上不装第二个模型。**
 
@@ -57,8 +57,8 @@ M3 目前暂停。
 ## 目录
 
 ```
-dafeiyu-phone-bridge/
-├── plugin/                  → 拷到 AstrBot 的 core/data/plugins/astrbot_plugin_dafeiyu_phone
+shengjian-phone-bridge/
+├── plugin/                  → 拷到 AstrBot 的 core/data/plugins/astrbot_plugin_shengjian
 │   ├── main.py              插件入口：起 HTTP 服务 + 注册 11 个 LLM 工具
 │   ├── metadata.yaml        插件元数据
 │   ├── _conf_schema.json    WebUI 里的配置项
@@ -69,7 +69,7 @@ dafeiyu-phone-bridge/
 │   └── safety/
 │       └── policy.py        白名单、限流、包名黑名单、敏感界面、审计日志
 ├── phone/
-│   └── dafeiyu_agent.js     手机端 AutoX.js 脚本
+│   └── shengjian_agent.js     手机端 AutoX.js 脚本
 ├── tests/
 │   ├── smoke_test.py        假手机客户端跑通整条链路（不需要真机）
 │   ├── live_server.py       真插件类 + 真 aiohttp + 假手机，直接调工具函数
@@ -79,7 +79,7 @@ dafeiyu-phone-bridge/
 │   ├── uiview.py            把 UI 树结果整理成可读文本
 │   └── dash.py / reload_plugin.py   面板 API 探测与插件重载
 │        环境变量：ASTRBOT_INSTANCE（实例目录）、ASTRBOT_DASH_PORT（面板端口）、
-│                  DAFEIYU_BRIDGE / DAFEIYU_DEBUG_TOKEN（回归用）
+│                  SHENGJIAN_BRIDGE / SHENGJIAN_DEBUG_TOKEN（回归用）
 └── docs/
     ├── STATUS.md            进度大纲（已完成 / 待办 P0–P5 / 平台边界）
     ├── CONSOLE_PLAN.md      管理控制台执行方案（讨论稿）
@@ -111,7 +111,7 @@ python tests/live_server.py
 python tests/import_check.py
 
 # 真机回归（需要插件里临时配了 debug_token）
-DAFEIYU_DEBUG_TOKEN=xxx python tools/dbg.py '{"action":"status"}'
+SHENGJIAN_DEBUG_TOKEN=xxx python tools/dbg.py '{"action":"status"}'
 ```
 
 Windows 控制台是 GBK，脚本输出里的 emoji 可能触发 `UnicodeEncodeError`；

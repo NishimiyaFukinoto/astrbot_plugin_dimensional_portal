@@ -16,7 +16,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
    腾讯 → NapCat（反向 WS，端口 6199）
      │
      ▼
-   AstrBot v4.29.3 ── 插件 astrbot_plugin_dafeiyu_phone
+   AstrBot v4.29.3 ── 插件 astrbot_plugin_shengjian
      │                     ├─ 注册 11 个 LLM 工具 phone_*
      │                     └─ aiohttp 服务 :8765  ◄──── 长轮询（手机主动来要任务）
      │                                  │
@@ -108,7 +108,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 | QQ 号白名单 | ✅ | 当前 `123456789,987654321`；名单外的号会被 `_gate` 拒绝并写 `deny_user` 审计 |
 | 限流 | ✅ | 默认 20 次 / 60 秒（滑动窗口） |
 | 包名黑名单 / 敏感界面 | ✅ | 微信/支付宝/银行/设置等界面拒截图（可配置放行） |
-| 审计日志 | ✅ | `data/plugin_data/astrbot_plugin_dafeiyu_phone/audit.jsonl`，每条任务一行（已累积 117 条） |
+| 审计日志 | ✅ | `data/plugin_data/astrbot_plugin_shengjian/audit.jsonl`，每条任务一行（已累积 117 条） |
 | 急停 | ✅ | `phone_stop` 清队列 |
 | X-Token 鉴权 | ✅ | 头或 query，`hmac.compare_digest` 比较 |
 
@@ -177,7 +177,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 | 个人数据脱敏 | ✅ | 文档/脚本里的 IP、QQ 号、Tailscale 账号、本机路径全部换成占位符 |
 | 硬编码 token | ✅ | 插件 `token` 默认空；手机脚本 `TOKEN` 为占位符；`tools/dbg.py` 改为环境变量 |
 | 防裸奔 | ✅ | `token` 为空时插件拒绝启动 HTTP 服务并打 error 日志 |
-| 许可证 | ✅ | MIT（`LICENSE`，署名 `dafeiyu`，可自行改） |
+| 许可证 | ✅ | MIT（`LICENSE`，署名 `我的圣剑`，可自行改） |
 | 忽略规则 | ✅ | `.gitignore`（`tmp/`、`data/`、`__pycache__`、截图）+ `.gitattributes`（统一 LF） |
 | README 开源化 | ✅ | 依赖与兼容性、安全须知、免责声明、致谢、License |
 | 版本号 | ✅ | 插件与手机脚本统一 `0.2.0` |
@@ -204,13 +204,13 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 
 ### 电脑端（已完成）
 - AstrBot v4.29.3 + NapCat（启动器管理：面板端口随机、6199 给 NapCat）
-- 插件已部署：`<实例>/core/data/plugins/astrbot_plugin_dafeiyu_phone`
+- 插件已部署：`<实例>/core/data/plugins/astrbot_plugin_shengjian`
 - Tailscale 已登录（电脑 `100.x.x.1`）；防火墙当前全关，无需放行
 
 ### 手机端（重启手机后要重做第 2–5 步）
 1. 装 AutoX.js（包名 `org.autojs.autoxjs.v6`）
 2. 开无障碍服务（`am force-stop` 或重启后会被关掉）
-3. 把 `phone/dafeiyu_agent.js` 放到 `/storage/emulated/0/脚本/`
+3. 把 `phone/shengjian_agent.js` 放到 `/storage/emulated/0/脚本/`
 4. 点「运行」，系统录屏弹窗里选 **整个屏幕** → 「继续」
 5. 给 AutoX.js 悬浮窗权限（后台启动应用的豁免条件）
 6. 电池优化白名单（防后台被杀）
@@ -220,7 +220,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 | 部分 | 行数 |
 | --- | --- |
 | 插件 Python（`plugin/`） | 1450 |
-| 手机脚本（`phone/dafeiyu_agent.js`） | 1116 |
+| 手机脚本（`phone/shengjian_agent.js`） | 1116 |
 | 测试（`tests/`，3 个脚本） | 664 |
 | 调试工具（`tools/`，5 个脚本） | 386 |
 | **合计（不含文档）** | **3616** |

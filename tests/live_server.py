@@ -2,7 +2,7 @@
 
 和 smoke_test.py 的区别：
   - smoke_test 只测 bridge/（不碰 astrbot 包、不碰插件类）
-  - 这里加载的是真正的 plugin/main.py，实例化真正的 DafeiyuPhoneBridge，
+  - 这里加载的是真正的 plugin/main.py，实例化真正的 ShengjianPhoneBridge，
     调用它真正的 initialize() 起 aiohttp，再直接调 phone_* 工具函数
 
 所以能提前抓到「initialize 起不来 / 工具里 _gate 逻辑写错 / event.send 用法不对」这类问题。
@@ -70,7 +70,7 @@ def check(name: str, cond: bool, extra: str = "") -> None:
 
 
 def load_plugin_module():
-    pkg_name = "astrbot_plugin_dafeiyu_phone"
+    pkg_name = "astrbot_plugin_shengjian"
     pkg = types.ModuleType(pkg_name)
     pkg.__path__ = [str(PLUGIN)]
     sys.modules[pkg_name] = pkg
@@ -217,7 +217,7 @@ async def main() -> int:
         "max_screenshot_kb": 1500,
         "allow_screenshot_sensitive": False,
     }
-    plugin = module.DafeiyuPhoneBridge(None, cfg)
+    plugin = module.ShengjianPhoneBridge(None, cfg)
 
     print(f"\n[1] initialize() 真实监听 {HOST}:{PORT}")
     await plugin.initialize()
@@ -239,45 +239,45 @@ async def main() -> int:
 
             print("\n[4] 直接调工具函数（走真实 _gate → _submit → HTTP）")
             ev = FakeEvent()
-            status = await module.DafeiyuPhoneBridge.phone_status(plugin, ev)
+            status = await module.ShengjianPhoneBridge.phone_status(plugin, ev)
             check("phone_status 报在线", "在线" in status and "1080x2400" in status, status)
 
-            tap = await module.DafeiyuPhoneBridge.phone_tap(plugin, ev, 540, 1200)
+            tap = await module.ShengjianPhoneBridge.phone_tap(plugin, ev, 540, 1200)
             check("phone_tap 成功", "已点击" in tap, tap)
 
-            ui = await module.DafeiyuPhoneBridge.phone_ui(plugin, ev, 80)
+            ui = await module.ShengjianPhoneBridge.phone_ui(plugin, ev, 80)
             check("phone_ui 渲染出坐标", "@(900,2200)" in ui, ui)
             check("phone_ui 过滤空容器", "FrameLayout" not in ui, ui)
             check("phone_ui 标出可点", "[可点]" in ui, ui)
 
-            shot = await module.DafeiyuPhoneBridge.phone_see(plugin, ev, False)
+            shot = await module.ShengjianPhoneBridge.phone_see(plugin, ev, False)
             check("phone_see 返回截图摘要", "截图已发到聊天" in shot, shot)
             check("phone_see 真的 send 了 1 条消息", len(ev.sent) == 1, f"{len(ev.sent)} 条")
 
-            how = await module.DafeiyuPhoneBridge.phone_key(plugin, ev, "home")
+            how = await module.ShengjianPhoneBridge.phone_key(plugin, ev, "home")
             check("phone_key 成功", "已按 home" in how, how)
 
-            bad = await module.DafeiyuPhoneBridge.phone_key(plugin, ev, "selfdestruct")
+            bad = await module.ShengjianPhoneBridge.phone_key(plugin, ev, "selfdestruct")
             check("phone_key 拒绝非法按键", "不认识的按键" in bad, bad)
 
             print("\n[5] 白名单拦截")
             stranger = FakeEvent("99999")
-            denied = await module.DafeiyuPhoneBridge.phone_tap(plugin, stranger, 1, 1)
+            denied = await module.ShengjianPhoneBridge.phone_tap(plugin, stranger, 1, 1)
             check("非白名单用户被拒", "没有权限" in denied, denied)
             check("被拒不发送任何消息", not stranger.sent, str(stranger.sent))
 
             print("\n[6] 敏感界面不截图")
             FAKE_STATE["cur_pkg"] = "com.tencent.mm"  # 让下一次心跳上报微信在前台
             await asyncio.sleep(0.6)
-            blocked = await module.DafeiyuPhoneBridge.phone_see(plugin, ev, False)
+            blocked = await module.ShengjianPhoneBridge.phone_see(plugin, ev, False)
             check("微信界面拒绝截图", "不把截图推到 QQ" in blocked, blocked)
             FAKE_STATE["cur_pkg"] = "com.example.notes"
             await asyncio.sleep(0.6)
-            allowed = await module.DafeiyuPhoneBridge.phone_see(plugin, ev, False)
+            allowed = await module.ShengjianPhoneBridge.phone_see(plugin, ev, False)
             check("切走后恢复截图", "截图已发到聊天" in allowed, allowed)
 
             print("\n[7] 急停")
-            stopd = await module.DafeiyuPhoneBridge.phone_stop(plugin, ev)
+            stopd = await module.ShengjianPhoneBridge.phone_stop(plugin, ev)
             check("phone_stop 有反馈", "急停" in stopd, stopd)
         finally:
             stop.set()

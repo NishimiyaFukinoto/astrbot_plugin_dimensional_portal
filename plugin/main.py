@@ -38,7 +38,7 @@ from .bridge.protocol import (
 from .bridge.server import PhoneBridgeServer
 from .safety.policy import SafetyPolicy
 
-SHOT_DIR = Path(gettempdir()) / "dafeiyu_phone"
+SHOT_DIR = Path(gettempdir()) / "shengjian_phone"
 SHOT_KEEP_S = 3600  # 截图临时文件保留 1 小时
 
 VALID_KEYS = {
@@ -52,7 +52,7 @@ def _audit_path() -> Path:
     try:
         from astrbot.core.utils.astrbot_path import get_astrbot_plugin_data_path
 
-        base = Path(get_astrbot_plugin_data_path()) / "astrbot_plugin_dafeiyu_phone"
+        base = Path(get_astrbot_plugin_data_path()) / "astrbot_plugin_shengjian"
     except Exception:  # 老版本没有这个工具函数
         base = Path(__file__).parent / "data"
     try:
@@ -62,10 +62,10 @@ def _audit_path() -> Path:
     return base / "audit.jsonl"
 
 
-class DafeiyuPhoneBridge(Star):
+class ShengjianPhoneBridge(Star):
     """让「大肥鱼」通过 QQ 远程操控安卓手机：看屏幕、点击、输入、开应用。
 
-    手机端装 AutoX.js 跑 dafeiyu_agent.js，主动长轮询本插件的 HTTP 端口。
+    手机端装 AutoX.js 跑 shengjian_agent.js，主动长轮询本插件的 HTTP 端口。
     唯一的大脑是 AstrBot 里的模型，手机上不跑任何模型。
     """
 
@@ -103,7 +103,7 @@ class DafeiyuPhoneBridge(Star):
 
         if not self.policy.allowed_user_ids:
             logger.warning(
-                "[dafeiyu-phone] allowed_user_ids 为空：任何能给大肥鱼发消息的人都能操控手机，"
+                "[shengjian] allowed_user_ids 为空：任何能给大肥鱼发消息的人都能操控手机，"
                 "正式使用前请填上你自己的 QQ 号。",
             )
 
@@ -113,8 +113,8 @@ class DafeiyuPhoneBridge(Star):
         """插件加载时启动 HTTP 服务。端口被占用只记错误，不影响 AstrBot 其它功能。"""
         if not self.server.token:
             logger.error(
-                "[dafeiyu-phone] 还没填 token：出于安全考虑不启动 HTTP 服务。"
-                "请在插件配置里填一个别人猜不到的字符串（手机端 dafeiyu_agent.js 的 TOKEN 必须一致），"
+                "[shengjian] 还没填 token：出于安全考虑不启动 HTTP 服务。"
+                "请在插件配置里填一个别人猜不到的字符串（手机端 shengjian_agent.js 的 TOKEN 必须一致），"
                 "然后重载插件。"
             )
             return
@@ -122,7 +122,7 @@ class DafeiyuPhoneBridge(Star):
             await self.server.start()
         except Exception as exc:  # 端口占用、权限等都算
             logger.error(
-                "[dafeiyu-phone] 无法监听 %s:%s（%s）。换个 listen_port 再重载插件。",
+                "[shengjian] 无法监听 %s:%s（%s）。换个 listen_port 再重载插件。",
                 self.server.host,
                 self.server.port,
                 exc,
@@ -135,7 +135,7 @@ class DafeiyuPhoneBridge(Star):
                 pass
             return
         logger.info(
-            "[dafeiyu-phone] 就绪：请让手机上的 AutoX.js 脚本连 http://<电脑IP>:%s",
+            "[shengjian] 就绪：请让手机上的 AutoX.js 脚本连 http://<电脑IP>:%s",
             self.server.port,
         )
 
@@ -166,7 +166,7 @@ class DafeiyuPhoneBridge(Star):
             return f"⏳ 操作太频繁：{msg}"
         if not self.hub.online:
             return (
-                "📴 手机不在线。请确认：① AutoX.js 里 dafeiyu_agent.js 正在运行；"
+                "📴 手机不在线。请确认：① AutoX.js 里 shengjian_agent.js 正在运行；"
                 "② 无障碍服务已开启；③ 手机和电脑在同一网络（或 Tailscale 已连）。"
             )
         return None
@@ -338,7 +338,7 @@ class DafeiyuPhoneBridge(Star):
             path = self._save_shot(raw)
             await event.send(MessageChain([Image.fromFileSystem(str(path))]))
         except Exception as exc:  # 消息平台出错不影响返回文本
-            logger.error("[dafeiyu-phone] 发送截图失败：%s", exc)
+            logger.error("[shengjian] 发送截图失败：%s", exc)
             return f"截图已拿到（{w}x{h}，{pkg}），但推到 QQ 失败：{exc}"
 
         summary = f"📸 截图已发到聊天（{w}x{h}，{self._fmt_size(len(raw))}，前台 {pkg}）"
@@ -571,7 +571,7 @@ class DafeiyuPhoneBridge(Star):
             return "⛔ 没有权限"
         dropped = self.hub.emergency_clear()
         self.policy.audit("emergency_stop", user=uid, dropped=dropped)
-        logger.warning("[dafeiyu-phone] 急停已执行，清空 %s 个任务", dropped)
+        logger.warning("[shengjian] 急停已执行，清空 %s 个任务", dropped)
         return f"🛑 已急停，清空 {dropped} 个待执行任务。手机端正在跑的那一步会做完。"
 
 
@@ -579,4 +579,4 @@ class _ToolError(Exception):
     """工具内部错误，message 直接展示给模型。"""
 
 
-__all__ = ["DafeiyuPhoneBridge"]
+__all__ = ["ShengjianPhoneBridge"]
