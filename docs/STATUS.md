@@ -181,7 +181,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 | 忽略规则 | ✅ | `.gitignore`（`tmp/`、`data/`、`__pycache__`、截图）+ `.gitattributes`（统一 LF） |
 | README 开源化 | ✅ | 依赖与兼容性、安全须知、免责声明、致谢、License |
 | 版本号 | ✅ | 插件与手机脚本统一 `0.2.0` |
-| 仓库地址 | ⬜ 待填 | `plugin/metadata.yaml` 的 `repo:` 还是 `https://github.com/USERNAME/...` |
+| 仓库地址 | ✅ 已填 | `https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur` |
 
 ## 5. ⚠️ 平台边界（不是 bug，改不了）
 
