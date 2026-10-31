@@ -1,0 +1,56 @@
+name: release-asset
+
+# 发布时自动把「可直接导入」的插件压缩包传到 Release 附件里，
+# 用户就不需要 git / 命令行，WebUI 里「导入压缩包」选这个 zip 即可。
+#
+# 也支持手动触发（Actions → release-asset → Run workflow，填 tag），
+# 用于给已经发布过的 Release 补附件。
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要上传附件的 Release tag（例如 v0.2.0）"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 打包插件（单层目录 + metadata.yaml）
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import shutil, zipfile
+          from pathlib import Path
+          name = "astrbot_plugin_excalibur"
+          src = Path("plugin")
+          out = Path(f"{name}.zip")
+          with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
+              for p in sorted(src.rglob("*")):
+                  if "__pycache__" in p.parts or p.is_dir():
+                      continue
+                  if p.suffix in {".pyc", ".pyo"} or p.name == "audit.jsonl":
+                      continue
+                  zf.write(p, (Path(name) / p.relative_to(src)).as_posix())
+          with zipfile.ZipFile(out) as zf:
+              names = zf.namelist()
+          assert f"{name}/metadata.yaml" in names, "缺少 metadata.yaml"
+          assert all(n.startswith(name + "/") for n in names), "存在根目录之外的文件"
+          print(f"{out} {out.stat().st_size} bytes / {len(names)} files")
+          PY
+
+      - name: 上传到 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
+          files: astrbot_plugin_excalibur.zip
+          fail_on_unmatched_files: true
