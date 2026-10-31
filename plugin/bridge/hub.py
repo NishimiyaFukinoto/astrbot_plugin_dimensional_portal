@@ -17,12 +17,19 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
 from .protocol import new_task_id, now_ts
+
+try:
+    # 和 server.py 一样：在 AstrBot 里用它的日志代理，脱离 AstrBot 跑测试时退回标准库。
+    from astrbot.api import logger as log  # type: ignore[assignment]
+except Exception:  # pragma: no cover - 只在独立测试环境走到
+    log = logging.getLogger("astrbot.phone_bridge")
 
 # 心跳间隔 10s，40s 没心跳就算掉线（容忍一次丢包 + 一次重连等待）
 DEFAULT_OFFLINE_AFTER = 40.0
@@ -74,7 +81,8 @@ class DeviceHub:
         self._wakeup = asyncio.Event()
 
         self._device: dict[str, Any] = {}
-        self._last_heartbeat = 0.0
+        # None = 还没收到过心跳。用 0.0 当哨兵会让冷启动（monotonic 从 0 开始）误判在线。
+        self._last_heartbeat: float | None = None
         self._last_poll = 0.0
         self._seq = 0
 
@@ -93,11 +101,13 @@ class DeviceHub:
 
     @property
     def online(self) -> bool:
+        if self._last_heartbeat is None:
+            return False
         return (time.monotonic() - self._last_heartbeat) < self.offline_after
 
     @property
     def last_heartbeat_age(self) -> float | None:
-        if not self._last_heartbeat:
+        if self._last_heartbeat is None:
             return None
         return round(time.monotonic() - self._last_heartbeat, 1)
 
@@ -180,7 +190,8 @@ class DeviceHub:
         except TimeoutError as exc:
             self.stats["tasks_timeout"] += 1
             raise TaskTimeout(
-                f"任务 {task.id}({action}) 超时：{timeout_ms}ms 内手机没回结果"
+                f"任务 {task.id}({action}) 超时：{timeout_ms}ms 内手机没回结果；"
+                "手机端可能已经开始执行了，先 phone_status / phone_see 确认真实状态再决定要不要重试"
             ) from exc
         finally:
             self._waiters.pop(task.id, None)
@@ -198,7 +209,12 @@ class DeviceHub:
         return result.get("data") or {}
 
     async def poll(self, since: int = 0, wait_s: float = 25.0) -> dict[str, Any]:
-        """手机端长轮询：有任务立刻返回，没有就挂起最多 wait_s 秒。"""
+        """手机端长轮询：有任务立刻返回，没有就挂起最多 wait_s 秒。
+
+        投递即出队（at-most-once）：任务一旦交给手机，服务端就不再保留，
+        `since` 只作为「我收到的最后一个 server_seq」的游标回报给手机，
+        **不参与回放**；断线/超时那一份任务会丢，不会重发。
+        """
         self.stats["polls"] += 1
         self._last_poll = time.monotonic()
         deadline = time.monotonic() + max(0.5, float(wait_s))
@@ -236,6 +252,11 @@ class DeviceHub:
         """手机回传结果。返回 False 表示这个任务已经超时/未知（结果被丢弃）。"""
         fut = self._waiters.pop(task_id, None)
         if fut is None or fut.done():
+            # 超时后手机才回结果属于正常现象（手机端可能已经执行过），记一笔方便排查。
+            log.warning(
+                "[excalibur] 迟到结果被丢弃：任务 %s（已超时或不存在，手机端可能已执行）",
+                task_id,
+            )
             return False
         fut.set_result({"ok": bool(ok), "data": data, "error": error})
         return True

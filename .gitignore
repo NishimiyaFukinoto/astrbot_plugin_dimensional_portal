@@ -18,6 +18,7 @@ tmp/
 
 # 手机端脚本的临时备份
 phone/*.bak
+phone/*.local.js
 *.apk
 
 # 编辑器/系统

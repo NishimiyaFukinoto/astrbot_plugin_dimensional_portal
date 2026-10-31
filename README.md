@@ -148,11 +148,12 @@ var TOKEN = "和插件配置里一模一样的 token";
 | `listen_host` | 只在内网用保持 `0.0.0.0`；想更保守就绑 Tailscale 的 IP |
 | `screenshot_quality` | 默认 `55`；觉得糊可以调到 70–80，流量吃紧就降 |
 | `allow_screenshot_sensitive` | 默认关；微信/支付宝/银行/设置类界面不截图，需要再开 |
+| `allow_sensitive_write` | 默认关；敏感界面上点击/输入一律拒绝，只许看。开了才会真的操作 |
 | `rate_limit_per_minute` | 默认 20；嫌机器人"手太快"可以降到 10 |
 | `debug_token` | **正式使用请留空**；非空会开一个能绕过白名单的调试接口 |
 
 <details>
-<summary>完整配置项（13 项）</summary>
+<summary>完整配置项（14 项）</summary>
 
 | 配置项（面板显示名） | 说明 | 默认值 |
 | --- | --- | --- |
@@ -167,6 +168,7 @@ var TOKEN = "和插件配置里一模一样的 token";
 | `screenshot_quality`（截图质量） | JPG 质量，1–95 | `55` |
 | `max_screenshot_kb`（截图体积上限） | 超过该值的截图会被拒绝发送 | `1500` |
 | `allow_screenshot_sensitive`（敏感界面截图） | 是否允许在微信/支付/银行/设置界面截图 | `false` |
+| `allow_sensitive_write`（敏感界面写操作） | 是否允许在敏感界面点击/输入；关闭时只能看 | `false` |
 | `sensitive_packages`（敏感应用包名） | 逗号分隔；留空使用内置列表 | 空 |
 | `package_blacklist`（包名黑名单） | 禁止启动/安装的包名，逗号分隔；留空使用内置列表 | 空 |
 
@@ -185,6 +187,8 @@ var TOKEN = "和插件配置里一模一样的 token";
 | 无障碍屏蔽 | 少数 App（部分银行、游戏反作弊）会主动屏蔽无障碍，读不到界面 |
 | 输入法 | 优先 `setText`，失败会退到剪贴板粘贴；个别输入法仍可能失败 |
 | 回车键 | 无 root 时无法注入任意按键，`enter` 是靠找「发送/搜索」按钮实现的 |
+| 任务不自动重试 | 投递即出队（at-most-once）：手机断线、超时或崩溃后任务直接失败，不会补发；先 `phone_see` 确认真实状态 |
+| 敏感界面写入 | 默认全部拒绝（只能看），要操作得手动打开 `allow_sensitive_write` |
 
 M3（相机拍照录像）、M4（下载安装 APK）、M5（前台保活加固）**尚未实现**，见 [Roadmap](#roadmap)。
 
@@ -193,7 +197,9 @@ M3（相机拍照录像）、M4（下载安装 APK）、M5（前台保活加固�
 - **只在可信网络里跑**。插件默认监听 `0.0.0.0:8765` 且没有内置 TLS；要暴露到公网请套反向代理。
 - **`token` 必须改**，且不要提交到仓库。
 - **白名单必须非空**。`allowed_user_ids` 为空等于任何能给机器人发消息的人都能操作你的手机。
-- **敏感界面默认不截图**（支付、密码、验证码、银行类）。
+- **敏感界面默认不截图**（支付、密码、验证码、银行类）；截图后还会按手机回报的真实前台包名和界面文字再查一次。
+- **敏感界面默认不能写**：点击/长按/滑动/打字/按键/开应用在敏感应用上都拒绝；确实需要时在配置里打开 `allow_sensitive_write`，用完关掉。
+- **黑名单按真实包名复查**：用中文名「微信」开应用，手机回报真实包名后仍会被拦。
 - **调试口默认关闭**，`debug_token` 用完记得清空。
 - 所有操作都会写审计日志：`<AstrBot 实例目录>/core/data/plugin_data/astrbot_plugin_excalibur/audit.jsonl`。
 
@@ -281,14 +287,19 @@ vivo/iQOO 还可能在第一次弹「应用跳转」确认框，点「始终打�
 ## 开发与测试
 
 ```bash
-# 不需要真机：假手机客户端跑通 心跳 → 长轮询 → 执行 → 回传（27 项断言）
+# 不需要真机：假手机客户端跑通 心跳 → 长轮询 → 执行 → 回传（35 项断言）
 python tests/smoke_test.py
 
-# 真插件类 + 真 aiohttp + 假手机，直接调工具函数（20 项断言）
-python tests/live_server.py
+# 真插件类 + 真 aiohttp + 假手机，直接调工具函数（46 项断言）
+# 必须用 AstrBot 实例的 venv python，系统 python 缺 astrbot 依赖
+"<实例目录>/venv/Scripts/python.exe" tests/live_server.py
 
 # 在 AstrBot 环境里验证 11 个工具都能注册（docstring → JSON Schema）
 python tests/import_check.py
+
+# 手机端脚本必须保持纯 ES5（Rhino 不认 => / let / const / 模板字符串 / includes）
+node --check phone/excalibur_agent.js
+python tools/check_es5.py
 ```
 
 `live_server.py` / `import_check.py` 会优先找本机的 AstrBot 实例（可用 `ASTRBOT_INSTANCE` 指定），

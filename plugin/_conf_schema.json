@@ -16,7 +16,9 @@
     "type": "int",
     "description": "监听端口",
     "hint": "默认 8765；修改后需重载插件。",
-    "default": 8765
+    "default": 8765,
+    "minimum": 1,
+    "maximum": 65535
   },
   "allowed_user_ids": {
     "type": "string",
@@ -35,36 +37,53 @@
     "type": "int",
     "description": "每分钟操作上限",
     "hint": "单个用户 60 秒内允许下发的任务数。",
-    "default": 20
+    "default": 20,
+    "minimum": 1,
+    "maximum": 600
   },
   "task_timeout_ms": {
     "type": "int",
     "description": "任务超时（毫秒）",
     "hint": "单个任务的默认超时；截图类任务会自动放宽。",
-    "default": 20000
+    "default": 20000,
+    "minimum": 1000,
+    "maximum": 120000
   },
   "offline_after_seconds": {
     "type": "int",
     "description": "离线判定（秒）",
     "hint": "超过该时长未收到心跳即视为手机离线。",
-    "default": 40
+    "default": 40,
+    "minimum": 5,
+    "maximum": 600
   },
   "screenshot_quality": {
     "type": "int",
     "description": "截图质量",
     "hint": "JPG 质量，范围 1–95；数值越大越清晰、体积越大。",
-    "default": 55
+    "default": 55,
+    "minimum": 1,
+    "maximum": 95
   },
   "max_screenshot_kb": {
     "type": "int",
     "description": "截图体积上限（KB）",
     "hint": "超过该值的截图会被拒绝发送。",
-    "default": 1500
+    "default": 1500,
+    "minimum": 100,
+    "maximum": 20000
   },
   "allow_screenshot_sensitive": {
     "type": "bool",
     "description": "敏感界面截图",
     "hint": "开启后允许在微信、支付宝、银行等界面截图；默认关闭。",
+    "default": false,
+    "obvious_hint": true
+  },
+  "allow_sensitive_write": {
+    "type": "bool",
+    "description": "敏感界面写操作",
+    "hint": "开启后允许在微信、支付宝、银行等界面点击/输入；默认关闭，只允许看。",
     "default": false,
     "obvious_hint": true
   },

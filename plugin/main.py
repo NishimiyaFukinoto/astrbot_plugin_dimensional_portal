@@ -34,6 +34,7 @@ from .bridge.protocol import (
     ACT_TAP,
     ACT_TEXT,
     ACT_UI,
+    WRITE_ACTIONS,
 )
 from .bridge.server import PhoneBridgeServer
 from .safety.policy import SafetyPolicy
@@ -41,9 +42,10 @@ from .safety.policy import SafetyPolicy
 SHOT_DIR = Path(gettempdir()) / "excalibur_phone"
 SHOT_KEEP_S = 3600  # 截图临时文件保留 1 小时
 
+# 手机端 actKey 只支持这些；menu/power 等无障碍注入不了的键不要写进来，
+# 否则插件放行、手机端抛「不认识的按键」，模型看到的是假支持。
 VALID_KEYS = {
     "back", "home", "recents", "enter", "delete", "volume_up", "volume_down",
-    "menu", "power",
 }
 
 
@@ -62,6 +64,27 @@ def _audit_path() -> Path:
     return base / "audit.jsonl"
 
 
+def _cfg_int(value: Any, default: int, key: str) -> int:
+    """配置里的数值可能是面板填错的字符串；别让一个错字把整个插件搞挂。"""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        logger.warning(
+            "[excalibur] 配置 %s=%r 不是整数，已回退默认值 %s（去面板改一下）", key, value, default
+        )
+        return default
+
+
+def _cfg_float(value: Any, default: float, key: str) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        logger.warning(
+            "[excalibur] 配置 %s=%r 不是数字，已回退默认值 %s（去面板改一下）", key, value, default
+        )
+        return default
+
+
 class ExcaliburPhoneBridge(Star):
     """让「大肥鱼」通过 QQ 远程操控安卓手机：看屏幕、点击、输入、开应用。
 
@@ -75,13 +98,21 @@ class ExcaliburPhoneBridge(Star):
 
         token = str(self._cfg("token", "") or "").strip()
         host = str(self._cfg("listen_host", "0.0.0.0"))
-        port = int(self._cfg("listen_port", 8765))
-        offline_after = float(self._cfg("offline_after_seconds", 40))
+        port = max(1, min(_cfg_int(self._cfg("listen_port", 8765), 8765, "listen_port"), 65535))
+        offline_after = max(
+            5.0,
+            min(
+                _cfg_float(self._cfg("offline_after_seconds", 40), 40.0, "offline_after_seconds"),
+                600.0,
+            ),
+        )
 
         audit_path = _audit_path()
         self.policy = SafetyPolicy(
             allowed_user_ids=self._cfg("allowed_user_ids", ""),
-            rate_limit=int(self._cfg("rate_limit_per_minute", 20)),
+            rate_limit=_cfg_int(
+                self._cfg("rate_limit_per_minute", 20), 20, "rate_limit_per_minute"
+            ),
             rate_window_s=60.0,
             sensitive_packages=self._cfg("sensitive_packages", None) or None,
             package_blacklist=self._cfg("package_blacklist", None) or None,
@@ -96,10 +127,19 @@ class ExcaliburPhoneBridge(Star):
             policy=self.policy,
             debug_token=self._cfg("debug_token", ""),
         )
-        self.default_timeout_ms = int(self._cfg("task_timeout_ms", 20000))
-        self.quality = int(self._cfg("screenshot_quality", 55))
-        self.max_shot_bytes = int(self._cfg("max_screenshot_kb", 1500)) * 1024
+        self.default_timeout_ms = max(
+            1000,
+            min(_cfg_int(self._cfg("task_timeout_ms", 20000), 20000, "task_timeout_ms"), 120000),
+        )
+        self.quality = max(
+            1, min(_cfg_int(self._cfg("screenshot_quality", 55), 55, "screenshot_quality"), 95)
+        )
+        self.max_shot_bytes = (
+            max(100, min(_cfg_int(self._cfg("max_screenshot_kb", 1500), 1500, "max_screenshot_kb"), 20000))
+            * 1024
+        )
         self.allow_sensitive_shot = bool(self._cfg("allow_screenshot_sensitive", False))
+        self.allow_sensitive_write = bool(self._cfg("allow_sensitive_write", False))
 
         if not self.policy.allowed_user_ids:
             logger.warning(
@@ -169,6 +209,24 @@ class ExcaliburPhoneBridge(Star):
                 "📴 手机不在线。请确认：① AutoX.js 里 excalibur_agent.js 正在运行；"
                 "② 无障碍服务已开启；③ 手机和电脑在同一网络（或 Tailscale 已连）。"
             )
+        # 敏感界面默认也不让动手：不截图保护的是画面，拦不住往密码框里打字/点「确认支付」。
+        # 只拦 WRITE_ACTIONS；phone_see / phone_ui 这类只读动作照常放行。
+        if action in WRITE_ACTIONS and not self.allow_sensitive_write:
+            cur = str(self.hub.device.get("cur_pkg") or "")
+            sensitive, why = self.policy.is_sensitive_screen(cur)
+            if sensitive:
+                self.policy.audit(
+                    "deny_sensitive_write",
+                    user=uid,
+                    action=action,
+                    pkg=cur,
+                    reason=why,
+                )
+                return (
+                    f"🔒 {why}，已拦截写操作（{action}），没有点、没有输入。\n"
+                    "敏感界面默认只能看（phone_see / phone_ui）。确实需要操作时，"
+                    "在插件配置里打开「敏感界面写操作」再试。"
+                )
         return None
 
     async def _submit(
@@ -209,14 +267,18 @@ class ExcaliburPhoneBridge(Star):
 
     @staticmethod
     def _fmt_size(n: int) -> str:
-        return f"{n / 1024:.0f}KB" if n < 1024 * 1024 else f"{n / 1048576:.1f}MB"
+        if n < 1024:
+            return f"{n}B"  # 1x1 缩略图别显示成「0KB」
+        if n < 1024 * 1024:
+            return f"{n / 1024:.0f}KB"
+        return f"{n / 1048576:.1f}MB"
 
     @staticmethod
     def _render_ui(data: dict[str, Any], limit: int) -> str:
         nodes = data.get("nodes") or []
         pkg = data.get("pkg") or "?"
         w, h = data.get("w"), data.get("h")
-        lines = [f"界面 {pkg}  {w}x{h}（共 {len(nodes)} 个节点，显示前 {min(len(nodes), limit)} 个）"]
+        lines: list[str] = []
         shown = 0
         for node in nodes:
             text = (node.get("text") or "").strip()
@@ -247,13 +309,53 @@ class ExcaliburPhoneBridge(Star):
                 parts.append("[选中]")
             lines.append(" ".join(parts))
             shown += 1
-        return "\n".join(lines)
+        # 表头用实际渲染条数：被跳过的空容器也算进「共 N 个」只会让数字对不上。
+        header = f"界面 {pkg}  {w}x{h}（列出 {shown} 个控件，手机共报 {len(nodes)} 个节点）"
+        return "\n".join([header, *lines])
 
     @staticmethod
     def _brief(data: dict[str, Any]) -> str:
         pkg = data.get("pkg") or data.get("cur_pkg") or ""
         extra = f"，当前界面 {pkg}" if pkg else ""
         return extra
+
+    @staticmethod
+    def _render_seen(seen: Any) -> str:
+        """把 open_app 没打开目标那一刻的界面快照渲染成一句人话。"""
+        if not isinstance(seen, dict):
+            return ""
+        pkg = str(seen.get("pkg") or "?")
+        win = seen.get("win")
+        if isinstance(win, dict):
+            win = win.get("pkg") or win.get("type") or ""
+        win = str(win or "").strip()
+        texts = [str(t).strip() for t in (seen.get("texts") or []) if str(t).strip()]
+        parts = [f"当时前台：{pkg}"]
+        if win:
+            parts.append(f"窗口：{win}")
+        if seen.get("popup_maybe"):
+            parts.append("可能有弹窗挡住")
+        if texts:
+            parts.append("可见文字：" + " | ".join(texts[:10]))
+        return "；".join(parts)
+
+    def _check_point(self, x: Any, y: Any) -> tuple[int, int, str | None]:
+        """校验点击坐标在屏幕内（用手机报的 w/h）；手机没报分辨率时不拦。"""
+        try:
+            xi, yi = int(x), int(y)
+        except (TypeError, ValueError):
+            return 0, 0, "坐标必须是整数像素"
+        dev = self.hub.device
+        try:
+            wi, hi = int(dev.get("w") or 0), int(dev.get("h") or 0)
+        except (TypeError, ValueError):
+            return xi, yi, None
+        if wi > 0 and hi > 0 and not (0 <= xi < wi and 0 <= yi < hi):
+            return xi, yi, (
+                f"坐标 ({xi},{yi}) 超出屏幕范围（{wi}x{hi}），左上角是 (0,0)，"
+                "请从 phone_see / phone_ui 里取坐标"
+            )
+        return xi, yi, None
 
     # ============================================================ 工具：状态
 
@@ -268,20 +370,39 @@ class ExcaliburPhoneBridge(Star):
         if not snap["online"]:
             age = snap["heartbeat_age"]
             hint = f"最后一次心跳 {age} 秒前。" if age is not None else "还没收到过任何心跳。"
+            # 0.0.0.0 是监听地址，不是手机能连的地址；提示用户换真实 IP。
+            host = self.server.host
+            addr = (
+                "电脑的真实局域网 IP 或 Tailscale IP"
+                if host in ("0.0.0.0", "::", "")
+                else host
+            )
             return (
                 f"📴 手机离线。{hint}\n"
                 "排查：① AutoX.js 脚本是否在跑（通知栏应有「脚本运行中」）；"
                 "② 无障碍服务是否开启；③ 手机能不能访问电脑的 "
-                f"{self.server.host}:{self.server.port}（浏览器打开 /healthz 试试）。"
+                f"{addr} 的 {self.server.port} 端口（浏览器打开 /healthz 试试）。"
             )
         battery = dev.get("battery", -1)
         bat = f"{battery}%{'（充电中）' if dev.get('charging') else ''}" if battery >= 0 else "未知"
+        # 悬浮窗守卫是「后台能打开微信/QQ」的前提（Android 10+ 的后台启动豁免），
+        # 旧脚本不上报这个字段，别把「不知道」说成「关了」。
+        overlay = dev.get("overlay")
+        if overlay is True:
+            overlay_line = "悬浮窗守卫：开（后台启动应用可用）"
+        elif overlay is False:
+            note = str(dev.get("overlay_note") or "").strip()
+            overlay_line = "悬浮窗守卫：关" + (f"（{note}）" if note else "")
+            overlay_line += " ⚠️ 微信/QQ 这类应用会打不开，请给 AutoX.js 悬浮窗权限并重启脚本"
+        else:
+            overlay_line = "悬浮窗守卫：未上报（手机端脚本版本较旧）"
         return (
             f"📱 手机在线（{snap['heartbeat_age']}s 前心跳）\n"
             f"设备：{dev.get('device') or '?'} / Android {dev.get('android') or '?'}"
             f" / {dev.get('w')}x{dev.get('h')}\n"
             f"电量：{bat}　屏幕：{'亮' if dev.get('screen_on') else '灭'}\n"
             f"前台应用：{dev.get('cur_pkg') or '?'}\n"
+            f"{overlay_line}\n"
             f"无障碍：{'开' if dev.get('accessibility') else '关'}"
             f"　截图权限：{'开' if dev.get('screen_capture') else '关'}\n"
             f"脚本版本：{dev.get('agent_version') or '?'}"
@@ -332,7 +453,35 @@ class ExcaliburPhoneBridge(Star):
                 "把 screenshot_quality 调低（比如 40）再试。"
             )
 
+        # 心跳里的 cur_pkg 最长 10 秒旧；手机回传的 pkg 才是按下快门那一刻的真实前台。
+        # 拿它再判一次（with_ui 时连界面文字一起），否则「心跳后切到微信 → 立刻截图」会漏过。
         pkg = str(data.get("pkg") or cur or "?")
+        ui_data: dict[str, Any] | None = None
+        ui_text = ""
+        if with_ui:
+            try:
+                ui_data = await self._submit(event, ACT_UI, {"max_nodes": 400}, 12000)
+                ui_text = " ".join(
+                    (n.get("text") or n.get("desc") or "").strip()
+                    for n in (ui_data.get("nodes") or [])
+                )[:3000]
+            except _ToolError:
+                ui_data = None
+
+        sensitive, why = self.policy.is_sensitive_screen(pkg, ui_text)
+        if sensitive and not self.allow_sensitive_shot:
+            # 到这一步还没落盘、更没 send：直接拒绝，不把敏感界面推给聊天。
+            self.policy.audit(
+                "deny_screenshot",
+                user=str(event.get_sender_id() or ""),
+                pkg=pkg,
+                reason=why,
+            )
+            raise _ToolError(
+                f"🙈 {why}，截图已拦截，未发送（按安全策略不把敏感界面推到 QQ）。"
+                "改用 phone_ui 读界面文字。"
+            )
+
         w, h = data.get("w"), data.get("h")
         try:
             path = self._save_shot(raw)
@@ -342,24 +491,20 @@ class ExcaliburPhoneBridge(Star):
             return f"截图已拿到（{w}x{h}，{pkg}），但推到 QQ 失败：{exc}"
 
         summary = f"📸 截图已发到聊天（{w}x{h}，{self._fmt_size(len(raw))}，前台 {pkg}）"
-        if with_ui:
-            try:
-                ui = await self._submit(event, ACT_UI, {"max_nodes": 400}, 12000)
-                texts = [
-                    (n.get("text") or n.get("desc") or "").strip()
-                    for n in (ui.get("nodes") or [])
-                ]
-                texts = [t for t in texts if t]
-                seen: list[str] = []
-                for t in texts:
-                    if t not in seen:
-                        seen.append(t)
-                    if len(seen) >= 12:
-                        break
-                if seen:
-                    summary += "\n界面上能看到的文字：" + " | ".join(seen)
-            except _ToolError:
-                pass
+        if ui_data is not None:
+            texts = [
+                (n.get("text") or n.get("desc") or "").strip()
+                for n in (ui_data.get("nodes") or [])
+            ]
+            texts = [t for t in texts if t]
+            seen: list[str] = []
+            for t in texts:
+                if t not in seen:
+                    seen.append(t)
+                if len(seen) >= 12:
+                    break
+            if seen:
+                summary += "\n界面上能看到的文字：" + " | ".join(seen)
         return summary
 
     @filter.llm_tool("phone_ui")
@@ -399,11 +544,14 @@ class ExcaliburPhoneBridge(Star):
         gate = self._gate(event, ACT_TAP)
         if gate:
             return gate
+        xi, yi, err = self._check_point(x, y)
+        if err:
+            return err
         try:
-            data = await self._submit(event, ACT_TAP, {"x": int(x), "y": int(y)}, 8000)
+            data = await self._submit(event, ACT_TAP, {"x": xi, "y": yi}, 8000)
         except _ToolError as exc:
             return str(exc)
-        return f"👆 已点击 ({x}, {y}){self._brief(data)}"
+        return f"👆 已点击 ({xi}, {yi}){self._brief(data)}"
 
     @filter.llm_tool("phone_long_press")
     async def phone_long_press(
@@ -419,14 +567,17 @@ class ExcaliburPhoneBridge(Star):
         gate = self._gate(event, ACT_LONG_PRESS)
         if gate:
             return gate
-        duration = max(300, min(int(duration_ms or 800), 5000))
+        xi, yi, err = self._check_point(x, y)
+        if err:
+            return err
+        duration = max(300, min(_cfg_int(duration_ms or 800, 800, "duration_ms"), 5000))
         try:
             data = await self._submit(
-                event, ACT_LONG_PRESS, {"x": int(x), "y": int(y), "duration": duration}, 10000
+                event, ACT_LONG_PRESS, {"x": xi, "y": yi, "duration": duration}, 10000
             )
         except _ToolError as exc:
             return str(exc)
-        return f"👆 已长按 ({x}, {y}) {duration}ms{self._brief(data)}"
+        return f"👆 已长按 ({xi}, {yi}) {duration}ms{self._brief(data)}"
 
     @filter.llm_tool("phone_swipe")
     async def phone_swipe(
@@ -476,16 +627,17 @@ class ExcaliburPhoneBridge(Star):
         gate = self._gate(event, ACT_TEXT)
         if gate:
             return gate
-        if not text:
+        raw = str(text or "")
+        if not raw.strip():  # 纯空格不算输入内容
             return "输入内容为空"
         try:
             data = await self._submit(
-                event, ACT_TEXT, {"text": str(text), "submit": bool(submit)}, 15000
+                event, ACT_TEXT, {"text": raw, "submit": bool(submit)}, 15000
             )
         except _ToolError as exc:
             return str(exc)
         how = data.get("method") or "setText"
-        return f"⌨️ 已输入「{text[:40]}」（{how}）{'，并已提交' if submit else ''}{self._brief(data)}"
+        return f"⌨️ 已输入「{raw[:40]}」（{how}）{'，并已提交' if submit else ''}{self._brief(data)}"
 
     @filter.llm_tool("phone_key")
     async def phone_key(self, event: AstrMessageEvent, key: str = "back") -> str:
@@ -523,16 +675,50 @@ class ExcaliburPhoneBridge(Star):
         target = str(name or "").strip()
         if not target:
             return "要打开哪个应用？给应用名或包名"
-        ok, why = self.policy.package_allowed(target if "." in target else "")
-        if not ok:
-            return f"⛔ {why}"
+        if "." in target:
+            ok, why = self.policy.package_allowed(target)
+            if not ok:
+                return f"⛔ {why}"
         params = {"package": target} if "." in target else {"name": target}
         try:
             data = await self._submit(event, ACT_OPEN_APP, params, 20000)
         except _ToolError as exc:
             return str(exc)
-        pkg = data.get("pkg") or "?"
-        return f"🚀 已尝试打开「{target}」，当前前台：{pkg}"
+
+        # 中文应用名在服务端解析不成包名，只能等手机回报真实前台再查一次黑名单，
+        # 否则「打开微信」会绕过只认包名的 package_blacklist。
+        pkg = str(data.get("pkg") or "").strip()
+        ok, why = self.policy.package_allowed(pkg)
+        if not ok:
+            self.policy.audit(
+                "deny_blacklist",
+                user=str(event.get_sender_id() or ""),
+                action=ACT_OPEN_APP,
+                target=target,
+                pkg=pkg,
+                reason=why,
+            )
+            raise _ToolError(
+                f"⛔ 已拦截：「{target}」打开后前台是 {pkg}，{why}。"
+                "按安全策略不能停留在该应用，建议立刻用 phone_key home 返回桌面。"
+            )
+
+        launched = data.get("launched")
+        warning = str(data.get("warning") or "").strip()
+        seen_note = self._render_seen(data.get("seen"))
+        if launched is False:
+            text = f"❌ 没能打开「{target}」"
+            text += f"：{warning}" if warning else "：系统没接受启动请求，可能没装或应用名不对"
+        else:
+            text = f"🚀 已打开「{target}」，当前前台：{pkg or '?'}"
+            if data.get("bounced"):
+                text += "\n（走了兜底路径：先把 AutoX 顶到前台再唤起，屏幕闪一下 AutoX 是正常的）"
+            if warning:
+                # 启动请求发出去了但前台没变，warning 里是手机端的具体原因，原样带给模型。
+                text += f"\n⚠️ 手机端提示：{warning}"
+        if seen_note and (launched is False or warning):
+            text += f"\n{seen_note}"
+        return text
 
     @filter.llm_tool("phone_find_tap")
     async def phone_find_tap(

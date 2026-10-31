@@ -155,13 +155,46 @@ async def main() -> int:
         print("\n[1] 鉴权")
         async with session.get(f"{BASE}/healthz") as resp:
             check("healthz 无需 token", resp.status == 200, f"status={resp.status}")
+            full = await resp.json()
+        # 这里的 session 默认带 X-Token，等于「已授权」，能拿到完整信息
+        check(
+            "healthz 带 token 返回在线细节",
+            "online" in full and "uptime_s" in full,
+            str(full),
+        )
+        async with aiohttp.ClientSession() as anon:  # 全新 session，不带任何头
+            async with anon.get(f"{BASE}/healthz") as resp:
+                naked = await resp.json()
+        check(
+            "healthz 未带 token 不暴露在线细节",
+            "online" not in naked and "uptime_s" not in naked,
+            str(naked),
+        )
         bad2 = aiohttp.ClientSession(headers={"X-Token": "wrong"})
         async with bad2.post(f"{BASE}/hb", json={}) as resp:
             check("错误 token 被拒 (401)", resp.status == 401, f"status={resp.status}")
         await bad2.close()
 
+        # /result 的 ok 必须是严格 bool：字符串 "false"、0、null 都不能当成功吞下去。
+        for bad_ok in ("false", 0, None):
+            async with session.post(
+                f"{BASE}/result", json={"id": "nope", "ok": bad_ok, "data": None}
+            ) as resp:
+                await resp.read()
+            check(
+                f"/result 拒绝非 bool ok ({bad_ok!r})",
+                resp.status == 400,
+                f"status={resp.status}",
+            )
+
+        # 没配 debug_token 时不注册 /debug/submit，必须 404。
+        async with session.post(f"{BASE}/debug/submit", json={"action": "tap"}) as resp:
+            await resp.read()
+        check("未配置 debug_token 时 404", resp.status == 404, f"status={resp.status}")
+
         print("\n[2] 离线时拒绝任务")
         check("无心跳时 offline", not hub.online)
+        check("冷启动 heartbeat_age 为 None", hub.snapshot()["heartbeat_age"] is None)
         try:
             await hub.submit("tap", {"x": 1, "y": 1}, timeout_ms=500)
             check("离线拒绝", False, "应该抛 DeviceOffline")
@@ -213,8 +246,13 @@ async def main() -> int:
         try:
             await hub.submit("tap", {"x": 1, "y": 1}, timeout_ms=800)
             check("无人取任务时超时", False)
-        except TaskTimeout:
+        except TaskTimeout as exc:
             check("无人取任务时超时", True)
+            check(
+                "超时文案提示手机端可能已执行",
+                "手机端可能已经开始执行" in str(exc),
+                str(exc),
+            )
 
         print("\n[6c] 急停清空队列")
         t1 = asyncio.create_task(

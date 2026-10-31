@@ -12,6 +12,8 @@
 
 所有端点（除 `/healthz`）都要求请求头 `X-Token: <token>`，也接受 `?token=<token>`。
 token 在插件配置里设置，手机脚本顶部 `TOKEN` 必须一致。用 `hmac.compare_digest` 比较，不匹配回 `401`。
+`compare_digest` 对非 ASCII 字符串会抛 `TypeError`，插件已包成「不匹配」——所以 `?token=中文`
+只会拿到 401，不会 500。
 
 ## 端点
 
@@ -65,8 +67,15 @@ token 在插件配置里设置，手机脚本顶部 `TOKEN` 必须一致。用 `
 }
 ```
 
-`jobs` 里可能一次返回多个（队列里堆了多个任务时）。手机端拿到后必须把 `server_seq`
-记成下一次的 `since`，否则会重复取到任务。
+`jobs` 里可能一次返回多个（队列里堆了多个任务时）。
+
+**投递即出队（at-most-once）**：任务一旦出现在 `/poll` 响应里，服务端就从队列删掉了。
+`server_seq` 只是给手机端做进度游标；`since` **不参与回放**——即使手机把旧 `since`
+再发一次，也不会重新拿到已经投递过的任务。所以：
+
+- 手机必须在收到响应后**立刻执行并回传结果**，中途崩溃 = 这个任务丢了。
+- 断线、超时、手机重启都会丢任务；插件会明确报错「超时 / 手机端可能已经开始执行」，
+  而不是静默重试。要确认执行结果，重新 `phone_see` / `phone_ui` 看真实状态。
 
 ```json
 {"ok": true, "server_seq": 8, "jobs": [], "timeout": true}
@@ -81,15 +90,28 @@ token 在插件配置里设置，手机脚本顶部 `TOKEN` 必须一致。用 `
 
 响应 `{"ok": true, "accepted": true}`。`accepted: false` 表示任务已超时或未知，结果被丢弃（正常现象，不用重试）。
 
+`ok` 必须是**严格布尔**（`true` / `false`）。传字符串 `"false"`、`0`、`null` 之类的值
+会直接收 `400 {"ok": false, "error": "ok must be a boolean"}`——服务端不会帮你 `bool()` 兜底，
+免得「手机端说失败、服务端当成功」。
+
 失败时 `ok: false`，`error` 是给模型看的中文原因（如「没找到可输入的焦点输入框」）。
 
-### `GET /healthz` — 存活探测（免 token）
+### `GET /healthz` — 存活探测
+
+不带 token 时只回最基本的两项（不暴露在线状态）：
+
+```json
+{"ok": true, "service": "excalibur-phone-bridge"}
+```
+
+带了正确的 `X-Token`（或 `?token=`）才追加运行细节：
 
 ```json
 {"ok": true, "service": "excalibur-phone-bridge", "online": true, "queue": 0, "uptime_s": 123.4, "ts": 1761...}
 ```
 
-手机浏览器打开 `http://电脑IP:8765/healthz` 能看到这个，就说明网络通了。
+手机浏览器打开 `http://电脑IP:8765/healthz` 能看到 `ok:true` 就说明网络通了；要看手机在不在线，
+在电脑上用 `curl -H "X-Token: <token>" http://127.0.0.1:8765/healthz`。
 
 ### `POST /debug/submit` — 调试下发（默认不注册）
 
@@ -109,6 +131,8 @@ token 在插件配置里设置，手机脚本顶部 `TOKEN` 必须一致。用 `
 
 `timeout_ms` 是服务端等待结果的超时；插件实际等 `timeout_ms + 3s`（给手机执行留余量）。
 排队超过 90 秒还没被取走的任务会被服务端丢弃，避免手机重连后执行一堆陈旧操作。
+超时抛 `TaskTimeout`，文案明确写「手机端可能已经开始执行了」——写操作（点击/输入）别自动重试，
+先用 `phone_see` / `phone_ui` 确认真实状态，否则可能点两次。
 
 ## 动作表
 
@@ -129,6 +153,7 @@ token 在插件配置里设置，手机脚本顶部 `TOKEN` 必须一致。用 `
 | `camera_photo` / `camera_video` / `download_apk` / `install_apk` | — | **未实现**，回 `ok:false`（M3/M4） |
 
 `key` 支持：`back` `home` `recents` `enter` `delete` `volume_up` `volume_down`。
+（`menu`、`power` 手机端没有实现，插件工具层也会直接拒绝——别在协议里给模型这种假希望。）
 
 实现说明（重要，别踩）：
 
@@ -198,8 +223,16 @@ type == 系统窗口(3) → -50
 
 - 白名单之外的用户调用任何 `phone_*` 都被拒，并写审计日志。
 - 每用户每分钟最多 20 次下发（可配）。
-- 敏感应用（微信、支付宝、银行、设置等）默认**不截图**，只允许读 UI 文字。
-- `package_blacklist` 里的包名禁止 `open_app`；M4 的安装动作也要过这一关。
+- 敏感应用（微信、支付宝、银行、设置等）默认**不截图**，只允许读 UI 文字；而且截图后
+  会用手机回报的**真实前台包名** + UI 文字再查一次（心跳可能落后 10 秒），命中就丢弃截图、
+  不写入临时文件、不发送。
+- 敏感界面上**写操作**（点击/长按/滑动/输入/按键/开应用/找字点击）默认全部拒绝，
+  只能看。要操作必须在插件配置里打开 `allow_sensitive_write`；命中时会写
+  `deny_sensitive_write` 审计。
+- `package_blacklist` 里的包名禁止 `open_app`：包名形态提前拦；中文应用名则在手机
+  回报真实 `pkg` 后复查，防止「中文名绕过去」。打开后落到黑名单还会提示用 `phone_key home` 退出。
 - 审计日志写在 AstrBot 的 `data/plugin_data/astrbot_plugin_excalibur/audit.jsonl`
   （旧版本没有 `get_astrbot_plugin_data_path` 时退回插件目录下的 `data/`），字段
-  `{"ts","kind","user","action","params",...}`，`kind` 有 `task` / `deny_user` / `deny_rate` / `emergency_stop`。
+  `{"ts","kind","user","action","params",...}`，`kind` 有 `task` / `deny_user` / `deny_rate` /
+  `deny_screenshot` / `deny_sensitive_write` / `deny_blacklist` / `emergency_stop`。
+  文件超过 5MB 自动轮转成 `audit.jsonl.1`（只留 1 份备份）。

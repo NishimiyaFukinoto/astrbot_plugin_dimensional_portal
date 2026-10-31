@@ -15,9 +15,9 @@ import argparse
 import datetime
 import hashlib
 import json
+import os
 import re
 import secrets
-import os
 import shutil
 import string
 import sys

@@ -30,12 +30,13 @@ QQ ←→ 腾讯 ←→ NapCat ←→ AstrBot ←→ 本插件 (aiohttp :8765) �
 | `plugin/bridge/hub.py` | 任务队列 + 长轮询唤醒 + 心跳/在线状态机 |
 | `plugin/bridge/server.py` | aiohttp 四个端点 `/hb` `/poll` `/result` `/healthz`（+ 可选 `/debug/submit`） |
 | `plugin/safety/policy.py` | 白名单、限流、包名黑名单、敏感界面、审计日志 |
-| `plugin/_conf_schema.json` | WebUI 里的 13 个配置项 |
-| `phone/excalibur_agent.js` | **手机端 AutoX.js 脚本**（纯 ES5，Rhino 可跑） |
-| `tests/smoke_test.py` | 协议层冒烟，**27 项**，不需要 AstrBot、不需要真机 |
-| `tests/live_server.py` | 真插件类 + 真 aiohttp + 假手机，直接调工具函数，**20 项** |
+| `plugin/_conf_schema.json` | WebUI 里的 14 个配置项 |
+| `phone/excalibur_agent.js` | **手机端 AutoX.js 脚本**（纯 ES5，Rhino 可跑；仓库里 `BASES`/`TOKEN` 是占位符） |
+| `tests/smoke_test.py` | 协议层冒烟，**35 项**，不需要 AstrBot、不需要真机 |
+| `tests/live_server.py` | 真插件类 + 真 aiohttp + 假手机，直接调工具函数，**46 项**（必须用实例 venv python） |
 | `tests/import_check.py` | 在真 AstrBot 环境验证 **11 个工具**全部注册（docstring→JSON Schema） |
-| `tools/make_release_zip.py` | 打「WebUI 导入压缩包」能直接装的 zip |
+| `tools/make_release_zip.py` | 打「WebUI 导入压缩包」能直接装的 zip（支持 `--help` / `--out-dir`） |
+| `tools/check_es5.py` | 手机端脚本 ES5 守卫：扫 `phone/*.js` 里禁止的 ES6 语法（CI 也跑） |
 | `tools/dbg.py` | 走 `/debug/submit` 确定性下发动作（真机回归用） |
 | `tools/reload_plugin.py` / `dash.py` | 用面板 API 重载插件 / 探测面板 |
 | `docs/PROTOCOL.md` | 协议真相（改协议先看这个） |
@@ -60,9 +61,13 @@ QQ ←→ 腾讯 ←→ NapCat ←→ AstrBot ←→ 本插件 (aiohttp :8765) �
 cd excalibur-phone-bridge
 
 # 三套测试（都不需要真机）
-python tests/smoke_test.py          # 27/27
-python tests/live_server.py         # 20/20
+python tests/smoke_test.py          # 35/35
+"$ASTRBOT_INSTANCE/venv/Scripts/python.exe" tests/live_server.py   # 46/46（必须实例 venv）
 python tests/import_check.py        # 11 个工具（需要能 import astrbot）
+
+# 手机端脚本约束检查（ES5）
+node --check phone/excalibur_agent.js
+python tools/check_es5.py
 
 # 打可安装的 zip → dist/astrbot_plugin_excalibur.zip
 python tools/make_release_zip.py
@@ -92,6 +97,9 @@ python tools/dbg.py '{"action":"open_app","params":{"package":"com.tencent.mm"}}
   `ui{max_nodes}` `screen{quality}` `status` `wait{ms}` `windows`（诊断）
 - 11 个工具：`phone_status` `phone_see` `phone_ui` `phone_tap` `phone_long_press` `phone_swipe`
   `phone_type` `phone_key` `phone_open_app` `phone_find_tap` `phone_stop`
+- 安全相关的两个开关：`allow_screenshot_sensitive`（默认关，敏感界面截图）、
+  `allow_sensitive_write`（默认关，敏感界面上的点击/输入/按键等写操作；关着时只能看）。
+  截图会按手机回报的**真实包名 + UI 文字**复查；`open_app` 用中文名打开后也按真实包名复查黑名单。
 
 ## 6. 手机端要点（改脚本前必看）
 
@@ -134,6 +142,7 @@ python tools/dbg.py '{"action":"open_app","params":{"package":"com.tencent.mm"}}
 | ego 脚本读文件 ENOENT | ego 的 nodejs `cwd` 是 ego 安装目录；一律写绝对路径，且必须用 `import`（ESM）不能用 `require` |
 | 重复提交把作者身份搞错 | 提交前确认 `git config user.name/user.email`；`noreply` 邮箱会被 GitHub 匹配到**别人**的账号 |
 | 截图全黑 | 手机息屏；先唤醒或开「充电时不锁屏」 |
+| `tests/live_server.py` 报 `ModuleNotFoundError: No module named 'deprecated'` | 用了系统 python 跑；脚本会把实例 `core/` 塞进 `sys.path` 但系统 python 没装 AstrBot 依赖。改用实例 venv：`/c/Users/YUZURU/.astrbot_launcher/instances/9040990f-.../venv/Scripts/python.exe tests/live_server.py` |
 
 ## 8. 待办（按优先级）
 

@@ -34,6 +34,18 @@ MAX_POLL_WAIT_S = 30.0
 DEFAULT_MAX_BODY = 16 * 1024 * 1024  # 截图 base64 走这条通道，留足余量
 
 
+def _token_match(supplied: str, expected: str) -> bool:
+    """常量时间比较 token；任一侧含非 ASCII 字符时按不匹配处理。
+
+    hmac.compare_digest 对 str 只接受 ASCII：手机端如果把中文 token 一类的值
+    塞进 ?token=，直接比较会抛 TypeError 变成 HTTP 500。这里兜成 401。
+    """
+    try:
+        return hmac.compare_digest(supplied, expected)
+    except (TypeError, UnicodeError):
+        return False
+
+
 class PhoneBridgeServer:
     def __init__(
         self,
@@ -95,7 +107,7 @@ class PhoneBridgeServer:
         if not self.token:
             return True
         supplied = request.headers.get("X-Token") or request.query.get("token") or ""
-        return hmac.compare_digest(supplied, self.token)
+        return _token_match(supplied, self.token)
 
     @staticmethod
     def _client_ip(request: web.Request) -> str:
@@ -135,6 +147,9 @@ class PhoneBridgeServer:
             "cur_pkg": str(payload.get("cur_pkg") or "")[:128],
             "accessibility": bool(payload.get("accessibility")),
             "screen_capture": bool(payload.get("screen_capture")),
+            # 悬浮窗守卫决定「后台能不能打开微信/QQ」；旧脚本不上报，用 None 区分「没报」和「关了」。
+            "overlay": None if payload.get("overlay") is None else bool(payload.get("overlay")),
+            "overlay_note": str(payload.get("overlay_note") or "")[:128],
             "agent_version": str(payload.get("agent_version") or "")[:32],
             "protocol": _to_int(payload.get("protocol")),
             "ip": self._client_ip(request),
@@ -153,6 +168,7 @@ class PhoneBridgeServer:
     async def handle_poll(self, request: web.Request) -> web.Response:
         if not self._authorized(request):
             return self._deny(request, "token 不匹配")
+        # since 目前只作为手机端的游标回报，不参与任务回放：投递即出队（at-most-once）。
         try:
             since = int(request.query.get("since", "0"))
         except (TypeError, ValueError):
@@ -177,7 +193,10 @@ class PhoneBridgeServer:
         if not task_id:
             return web.json_response({"ok": False, "error": "missing id"}, status=400)
 
-        ok = bool(payload.get("ok"))
+        ok = payload.get("ok")
+        if not isinstance(ok, bool):
+            # 不能 bool() 兜底：字符串 "false" 会被当成 True，工具会把失败当成功返回。
+            return web.json_response({"ok": False, "error": "ok must be a boolean"}, status=400)
         data = payload.get("data")
         error = payload.get("error")
         accepted = self.hub.on_result(task_id, ok, data, error)
@@ -190,10 +209,12 @@ class PhoneBridgeServer:
         return web.json_response({"ok": True, "accepted": accepted})
 
     async def handle_healthz(self, request: web.Request) -> web.Response:
-        return web.json_response(
+        # 不带 token 时只证明「服务活着」，不暴露在线状态/队列长度/运行时长。
+        body: dict[str, Any] = {"ok": True, "service": "excalibur-phone-bridge"}
+        if not self._authorized(request):
+            return web.json_response(body)
+        body.update(
             {
-                "ok": True,
-                "service": "excalibur-phone-bridge",
                 "online": self.hub.online,
                 "queue": self.hub.queue_size,
                 "uptime_s": round(time.monotonic() - self.started_at, 1)
@@ -202,6 +223,7 @@ class PhoneBridgeServer:
                 "ts": now_ts(),
             }
         )
+        return web.json_response(body)
 
 
     async def handle_debug_submit(self, request: web.Request) -> web.Response:
@@ -216,7 +238,7 @@ class PhoneBridgeServer:
                 {"ok": False, "error": "debug endpoint disabled"}, status=404
             )
         supplied = request.headers.get("X-Debug-Token") or ""
-        if not hmac.compare_digest(supplied, self.debug_token):
+        if not _token_match(supplied, self.debug_token):
             return self._deny(request, "debug token 不匹配")
 
         payload = loads(await request.read()) or {}

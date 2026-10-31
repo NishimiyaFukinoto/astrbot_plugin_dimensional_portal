@@ -897,8 +897,10 @@ function actFindText(job) {
 
 function actWait(job) {
     var ms = job.params.ms ? job.params.ms : 1000;
-    sleepSafe(Math.min(ms, 30000));
-    return { waited_ms: ms, pkg: currentPkg() };
+    // 回传夹取后的真实等待时长，别把「想等 60s、实际只等 30s」说成已等 60s。
+    var waited = Math.min(ms, 30000);
+    sleepSafe(waited);
+    return { waited_ms: waited, pkg: currentPkg() };
 }
 
 function actStatus(job) {

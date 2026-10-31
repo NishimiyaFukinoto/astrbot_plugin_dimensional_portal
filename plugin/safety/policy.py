@@ -6,10 +6,19 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
+
+try:
+    from astrbot.api import logger as log  # type: ignore[assignment]
+except Exception:  # 独立跑单测时退回标准库
+    log = logging.getLogger("astrbot.phone_bridge")
+
+AUDIT_MAX_BYTES = 5 * 1024 * 1024  # 超过就轮转，避免审计日志无限涨
+AUDIT_BACKUPS = 1                  # 只留 1 份旧日志（.1）
 
 # 默认敏感包名：这些应用里不截图（微信/支付宝/银行/密码管理器等）——
 # 截图会推到 QQ（腾讯服务器），等于把私密画面外传。
@@ -88,6 +97,10 @@ class SafetyPolicy:
         bucket = self._hits[key]
         while bucket and now - bucket[0] > self.rate_window_s:
             bucket.popleft()
+        if not bucket:
+            # 空 deque 不留在 defaultdict 里，否则每个用过的用户 ID 都会常驻内存。
+            self._hits.pop(key, None)
+            bucket = self._hits[key]
         if len(bucket) >= self.rate_limit:
             wait = self.rate_window_s - (now - bucket[0])
             return False, f"触发限流（{self.rate_limit} 次/{int(self.rate_window_s)}s），请 {wait:.0f}s 后再试"
@@ -125,7 +138,28 @@ class SafetyPolicy:
             return
         record = {"ts": round(time.time(), 3), "kind": kind, **fields}
         try:
+            self._rotate_audit()
             with self.audit_path.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except OSError as exc:
+            # 审计写失败不该打断工具调用，但也不能完全静默——排查时要能看见。
+            log.warning("[excalibur] 审计日志写入失败（%s）：%s", self.audit_path, exc)
+
+    def _rotate_audit(self) -> None:
+        """审计日志超过阈值就把当前文件改成 .1（只保留 1 份备份）。"""
+        try:
+            if self.audit_path is None or not self.audit_path.exists():
+                return
+            if self.audit_path.stat().st_size < AUDIT_MAX_BYTES:
+                return
         except OSError:
-            pass
+            return
+        for idx in range(AUDIT_BACKUPS, 0, -1):
+            src = self.audit_path if idx == 1 else Path(f"{self.audit_path}.{idx - 1}")
+            dst = Path(f"{self.audit_path}.{idx}")
+            try:
+                if src.exists():
+                    dst.unlink(missing_ok=True)
+                    src.replace(dst)
+            except OSError as exc:
+                log.warning("[excalibur] 审计日志轮转失败（%s -> %s）：%s", src, dst, exc)

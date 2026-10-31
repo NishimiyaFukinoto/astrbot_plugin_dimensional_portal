@@ -107,7 +107,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 | --- | --- | --- |
 | QQ 号白名单 | ✅ | 当前 `123456789,987654321`；名单外的号会被 `_gate` 拒绝并写 `deny_user` 审计 |
 | 限流 | ✅ | 默认 20 次 / 60 秒（滑动窗口） |
-| 包名黑名单 / 敏感界面 | ✅ | 微信/支付宝/银行/设置等界面拒截图（可配置放行） |
+| 包名黑名单 / 敏感界面 | ✅ | 微信/支付宝/银行/设置等界面拒截图（可配置放行）；敏感界面写操作默认拒绝，按真实包名复查黑名单 |
 | 审计日志 | ✅ | `data/plugin_data/astrbot_plugin_excalibur/audit.jsonl`，每条任务一行（已累积 117 条） |
 | 急停 | ✅ | `phone_stop` 清队列 |
 | X-Token 鉴权 | ✅ | 头或 query，`hmac.compare_digest` 比较 |
@@ -116,8 +116,8 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 
 | 项目 | 状态 |
 | --- | --- |
-| 假手机端到端测试 `tests/smoke_test.py` | ✅ 27/27 通过 |
-| 真插件类 + 真 aiohttp 测试 `tests/live_server.py` | ✅ 20/20 通过 |
+| 假手机端到端测试 `tests/smoke_test.py` | ✅ 35/35 通过 |
+| 真插件类 + 真 aiohttp 测试 `tests/live_server.py` | ✅ 46/46 通过（需实例 venv python） |
 | 真实 AstrBot 环境里 11 个工具注册 `tests/import_check.py` | ✅ 全部通过 |
 | 调试下发端点 `/debug/submit` | ✅ 回归时用过；现已清空 `debug_token` 关闭 |
 | 文档（README / INSTALL / PROTOCOL / PLAN / STATUS） | ✅ 已写 |
