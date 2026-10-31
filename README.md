@@ -244,10 +244,11 @@ vivo/iQOO 还可能在第一次弹「应用跳转」确认框，点「始终打�
 
 | 文档 | 内容 |
 | --- | --- |
+| [AGENTS.md](AGENTS.md) | **接手必读**：项目全貌、当前状态、踩过的坑、待办与开工步骤（给新会话 / 新贡献者） |
 | [docs/INSTALL.md](docs/INSTALL.md) | 完整安装步骤、权限细节、排错表 |
 | [docs/PROTOCOL.md](docs/PROTOCOL.md) | 通信协议：三个端点、动作表、返回结构 |
 | [docs/PLAN.md](docs/PLAN.md) | 里程碑、决策记录、已知风险、调试手册 |
-| [docs/STATUS.md](docs/STATUS.md) | 进度大纲（已完成 / 待办 P0–P5 / 平台边界） |
+| [docs/STATUS.md](docs/STATUS.md) | 进度大纲（已完成 / 待办 P0–P6 / 平台边界） |
 | [docs/CONSOLE_PLAN.md](docs/CONSOLE_PLAN.md) | 管理控制台方案（讨论稿，未实现） |
 
 ## Roadmap
