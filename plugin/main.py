@@ -13,6 +13,10 @@ QQ → 大肥鱼 → 本插件（aiohttp :8765）→ 手机 AutoX.js 执行器 �
 from __future__ import annotations
 
 import base64
+import json
+import os
+import secrets
+import socket
 import time
 from pathlib import Path
 from tempfile import gettempdir
@@ -37,7 +41,7 @@ from .bridge.protocol import (
     WRITE_ACTIONS,
 )
 from .bridge.server import PhoneBridgeServer
-from .safety.policy import SafetyPolicy
+from .safety.policy import SafetyPolicy, _as_list
 
 SHOT_DIR = Path(gettempdir()) / "excalibur_phone"
 SHOT_KEEP_S = 3600  # 截图临时文件保留 1 小时
@@ -51,6 +55,9 @@ VALID_KEYS = {
 
 def _audit_path() -> Path:
     """审计日志放 AstrBot 的 data/plugin_data 下，不混在插件代码目录里（升级插件不丢）。"""
+    override = os.environ.get("EXCALIBUR_AUDIT_PATH")
+    if override:
+        return Path(override)
     try:
         from astrbot.core.utils.astrbot_path import get_astrbot_plugin_data_path
 
@@ -85,6 +92,92 @@ def _cfg_float(value: Any, default: float, key: str) -> float:
         return default
 
 
+def _local_ip() -> str:
+    """取本机在局域网/Tailscale 里的地址，只用来打印控制台网址。"""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            sock.connect(("10.255.255.255", 1))  # 不会真的发包，只是让内核选出口网卡
+            return str(sock.getsockname()[0])
+        finally:
+            sock.close()
+    except OSError:
+        pass
+    try:
+        return socket.gethostbyname(socket.gethostname())
+    except OSError:
+        return "127.0.0.1"
+
+
+def _split_ids(value: Any) -> list[str]:
+    """白名单统一成 list[str]：兼容 "10001,10002" / ["10001"] / 单个号。"""
+    return _as_list(value)
+
+
+class _ConsoleAdapter:
+    """管理控制台需要的最小能力：读快照、改白名单、急停。
+
+    隔这一层是为了让 bridge/server.py 完全不碰 AstrBot 的 self.config；
+    以后 V2 加"安全策略开关"时只改这里，HTTP 层不用动。
+    """
+
+    def __init__(self, plugin: "ExcaliburPhoneBridge") -> None:
+        self.plugin = plugin
+
+    def snapshot(self) -> dict[str, Any]:
+        return {
+            "config": {
+                "allowed_user_ids": _split_ids(self.plugin.config.get("allowed_user_ids", "")),
+                "rate_limit_per_minute": int(self.plugin.policy.rate_limit),
+            },
+            "audit": self._audit_tail(20),
+        }
+
+    def apply_config(self, payload: dict[str, Any], ip: str = "-") -> dict[str, Any]:
+        """只处理 allowed_user_ids，其它字段一律忽略；返回落盘后回读的真实值。"""
+        if "allowed_user_ids" in payload:
+            ids = list(dict.fromkeys(_split_ids(payload.get("allowed_user_ids"))))
+            if not ids:
+                raise ValueError("白名单至少要保留一个 QQ 号，不能删光")
+            bad = [item for item in ids if not item.isdigit()]
+            if bad:
+                raise ValueError(f"QQ 号必须是纯数字：{', '.join(bad)}")
+            self.plugin.config["allowed_user_ids"] = ",".join(ids)
+            saver = getattr(self.plugin.config, "save_config", None)
+            if callable(saver):
+                saver()
+            self.plugin._rebuild_policy()
+            server = getattr(self.plugin, "server", None)
+            if server is not None:
+                server.policy = self.plugin.policy
+            self.plugin.policy.audit("admin", ip=ip, change={"allowed_user_ids": ids})
+        return {
+            "allowed_user_ids": _split_ids(self.plugin.config.get("allowed_user_ids", "")),
+            "rate_limit_per_minute": int(self.plugin.policy.rate_limit),
+        }
+
+    def stop_all(self) -> int:
+        return int(self.plugin.hub.emergency_clear())
+
+    def _audit_tail(self, limit: int) -> list[dict[str, Any]]:
+        path = getattr(self.plugin, "audit_path", None)
+        if not path:
+            return []
+        try:
+            lines = Path(path).read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return []
+        out: list[dict[str, Any]] = []
+        for line in lines[-limit:]:
+            try:
+                item = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(item, dict):
+                out.append(item)
+        return out
+
+
 class ExcaliburPhoneBridge(Star):
     """让「大肥鱼」通过 QQ 远程操控安卓手机：看屏幕、点击、输入、开应用。
 
@@ -107,18 +200,10 @@ class ExcaliburPhoneBridge(Star):
             ),
         )
 
-        audit_path = _audit_path()
-        self.policy = SafetyPolicy(
-            allowed_user_ids=self._cfg("allowed_user_ids", ""),
-            rate_limit=_cfg_int(
-                self._cfg("rate_limit_per_minute", 20), 20, "rate_limit_per_minute"
-            ),
-            rate_window_s=60.0,
-            sensitive_packages=self._cfg("sensitive_packages", None) or None,
-            package_blacklist=self._cfg("package_blacklist", None) or None,
-            audit_path=audit_path,
-        )
+        self.audit_path = _audit_path()
+        self.policy = self._make_policy()
         self.hub = DeviceHub(offline_after=offline_after)
+        self.console = _ConsoleAdapter(self)
         self.server = PhoneBridgeServer(
             hub=self.hub,
             token=token,
@@ -126,6 +211,8 @@ class ExcaliburPhoneBridge(Star):
             port=port,
             policy=self.policy,
             debug_token=self._cfg("debug_token", ""),
+            admin_token=str(self.config.get("admin_token", "") or ""),
+            console=self.console,
         )
         self.default_timeout_ms = max(
             1000,
@@ -158,6 +245,7 @@ class ExcaliburPhoneBridge(Star):
                 "然后重载插件。"
             )
             return
+        self._ensure_admin()
         try:
             await self.server.start()
         except Exception as exc:  # 端口占用、权限等都算
@@ -178,6 +266,8 @@ class ExcaliburPhoneBridge(Star):
             "[excalibur] 就绪：请让手机上的 AutoX.js 脚本连 http://<电脑IP>:%s",
             self.server.port,
         )
+        if self.server.admin_enabled:
+            logger.info("[excalibur] 管理控制台：%s", self._console_url())
 
     async def terminate(self) -> None:
         await self.server.stop()
@@ -192,6 +282,52 @@ class ExcaliburPhoneBridge(Star):
         if value is None or value == "":
             return default
         return value
+
+    def _make_policy(self) -> SafetyPolicy:
+        return SafetyPolicy(
+            allowed_user_ids=self._cfg("allowed_user_ids", ""),
+            rate_limit=_cfg_int(
+                self._cfg("rate_limit_per_minute", 20), 20, "rate_limit_per_minute"
+            ),
+            rate_window_s=60.0,
+            sensitive_packages=self._cfg("sensitive_packages", None) or None,
+            package_blacklist=self._cfg("package_blacklist", None) or None,
+            audit_path=self.audit_path,
+        )
+
+    def _rebuild_policy(self) -> None:
+        """白名单改了：就地重建 SafetyPolicy，不重载插件（会话和队列都还在）。"""
+        self.policy = self._make_policy()
+
+    def _ensure_admin(self) -> None:
+        """admin_token 为空就现场生成并写盘；填 off 就彻底不做控制台。"""
+        raw = str(self.config.get("admin_token", "") or "").strip()
+        if raw.lower() == "off":
+            logger.info("[excalibur] 管理控制台已关闭（admin_token=off）")
+            return
+        if raw:
+            self.server.enable_admin(raw)
+            return
+        token = secrets.token_urlsafe(24)
+        try:
+            self.config["admin_token"] = token
+            saver = getattr(self.config, "save_config", None)
+            if callable(saver):
+                saver()
+            else:
+                logger.warning(
+                    "[excalibur] 配置不支持 save_config，自动生成的 admin_token 只在本次运行有效"
+                )
+            self.server.enable_admin(token)
+            logger.info("[excalibur] 已自动生成 admin_token 并写入插件配置")
+        except Exception as exc:  # 写盘失败也别影响手机桥接
+            logger.error("[excalibur] 自动生成 admin_token 失败：%s", exc)
+
+    def _console_url(self) -> str:
+        host = self.server.host
+        if host in ("", "0.0.0.0", "::"):
+            host = _local_ip()
+        return f"http://{host}:{self.server.port}/console?k={self.server.admin_token}"
 
     def _gate(self, event: AstrMessageEvent, action: str) -> str | None:
         """白名单 + 限流 + 在线检查。返回非 None 就是拒绝理由。"""

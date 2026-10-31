@@ -28,13 +28,15 @@ QQ ←→ 腾讯 ←→ NapCat ←→ AstrBot ←→ 本插件 (aiohttp :8765) �
 | `plugin/main.py` | 插件入口：`class ExcaliburPhoneBridge(Star)`，起 HTTP 服务 + 注册 **11 个** `@filter.llm_tool` |
 | `plugin/bridge/protocol.py` | 协议常量（动作名、任务 id、JSON 工具） |
 | `plugin/bridge/hub.py` | 任务队列 + 长轮询唤醒 + 心跳/在线状态机 |
-| `plugin/bridge/server.py` | aiohttp 四个端点 `/hb` `/poll` `/result` `/healthz`（+ 可选 `/debug/submit`） |
+| `plugin/bridge/server.py` | aiohttp 四个端点 `/hb` `/poll` `/result` `/healthz`（+ 可选 `/debug/submit`、可选控制台 `/console` `/admin/*`） |
+| `plugin/bridge/console.html` | 管理控制台单文件页面（内嵌 CSS/JS、零外部请求、移动端可用） |
 | `plugin/safety/policy.py` | 白名单、限流、包名黑名单、敏感界面、审计日志 |
-| `plugin/_conf_schema.json` | WebUI 里的 14 个配置项 |
+| `plugin/_conf_schema.json` | WebUI 里的 15 个配置项 |
 | `phone/excalibur_agent.js` | **手机端 AutoX.js 脚本**（纯 ES5，Rhino 可跑；仓库里 `BASES`/`TOKEN` 是占位符） |
 | `tests/smoke_test.py` | 协议层冒烟，**35 项**，不需要 AstrBot、不需要真机 |
 | `tests/live_server.py` | 真插件类 + 真 aiohttp + 假手机，直接调工具函数，**46 项**（必须用实例 venv python） |
 | `tests/import_check.py` | 在真 AstrBot 环境验证 **11 个工具**全部注册（docstring→JSON Schema） |
+| `tests/admin_console_test.py` | 控制台端到端，**40 项**（真插件类 + 假手机 + 4 个端口，必须实例 venv） |
 | `tools/make_release_zip.py` | 打「WebUI 导入压缩包」能直接装的 zip（支持 `--help` / `--out-dir`） |
 | `tools/check_es5.py` | 手机端脚本 ES5 守卫：扫 `phone/*.js` 里禁止的 ES6 语法（CI 也跑） |
 | `tools/dbg.py` | 走 `/debug/submit` 确定性下发动作（真机回归用） |
@@ -43,7 +45,7 @@ QQ ←→ 腾讯 ←→ NapCat ←→ AstrBot ←→ 本插件 (aiohttp :8765) �
 | `docs/INSTALL.md` | 安装、权限、排错 |
 | `docs/PLAN.md` | 里程碑、决策记录、风险、调试手册 |
 | `docs/STATUS.md` | 进度大纲（已完成 / 待办 P0–P6） |
-| `docs/CONSOLE_PLAN.md` | 管理控制台的执行方案（**已讨论、未实现**） |
+| `docs/CONSOLE_PLAN.md` | 管理控制台的执行方案（V1 已实现，V2 方向仍以此为准） |
 
 ## 3. 当前状态（2026-11-01）
 
@@ -53,7 +55,9 @@ QQ ←→ 腾讯 ←→ NapCat ←→ AstrBot ←→ 本插件 (aiohttp :8765) �
 - 对外呈现：logo、6 徽章、335 行 README、10 个 topics、issue/PR 模板、CHANGELOG
 - 部署：**已部署**到 AstrBot 实例的 `core/data/plugins/astrbot_plugin_excalibur/`
 - 手机：**离线**，而且手机里跑的还是改名前的旧脚本 `dafeiyu_agent.js`（指向旧地址）；需要重新推 `excalibur_agent.js` 并重启
-- 未做：M3 相机、M4 下载装 APK、M5 保活加固、管理控制台
+- 管理控制台：**V1 已实现**（`admin_token` 自动生成、`/console` 看状态/改白名单/急停，错 k 403、失败 10 次锁 60 秒）；
+  安全策略开关与审计列表留 V2，接口走 `_ConsoleAdapter` 适配器
+- 未做：M3 相机、M4 下载装 APK、M5 保活加固、控制台 V2
 
 ## 4. 五分钟跑起来
 
@@ -64,6 +68,7 @@ cd excalibur-phone-bridge
 python tests/smoke_test.py          # 35/35
 "$ASTRBOT_INSTANCE/venv/Scripts/python.exe" tests/live_server.py   # 46/46（必须实例 venv）
 python tests/import_check.py        # 11 个工具（需要能 import astrbot）
+"$ASTRBOT_INSTANCE/venv/Scripts/python.exe" tests/admin_console_test.py   # 40/40（必须实例 venv）
 
 # 手机端脚本约束检查（ES5）
 node --check phone/excalibur_agent.js
@@ -143,11 +148,13 @@ python tools/dbg.py '{"action":"open_app","params":{"package":"com.tencent.mm"}}
 | 重复提交把作者身份搞错 | 提交前确认 `git config user.name/user.email`；`noreply` 邮箱会被 GitHub 匹配到**别人**的账号 |
 | 截图全黑 | 手机息屏；先唤醒或开「充电时不锁屏」 |
 | `tests/live_server.py` 报 `ModuleNotFoundError: No module named 'deprecated'` | 用了系统 python 跑；脚本会把实例 `core/` 塞进 `sys.path` 但系统 python 没装 AstrBot 依赖。改用实例 venv：`/c/Users/YUZURU/.astrbot_launcher/instances/9040990f-.../venv/Scripts/python.exe tests/live_server.py` |
+| 控制台打不开 / 不知道 `k` 是什么 | `admin_token` 留空时首次启动自动生成并打日志「管理控制台：http://…/console?k=…」；填 `off` 是彻底关闭（四路由 404）；忘了就删掉配置里的值重启，会再生成一串 |
+| 控制台急停测试老是不稳（`cleared` 是 0） | 带假手机的实例里，长轮询会把刚排队的任务立刻取走；急停测试要在**没有假手机**的独立实例上做 |
 
 ## 8. 待办（按优先级）
 
 - **P0**：手机恢复在线 —— 推新脚本 `excalibur_agent.js` + 重启（见第 6 节）；顺带把 `debug_token` 临时打开做回归
-- **P1**：管理控制台（方案见 `docs/CONSOLE_PLAN.md`，用户已同意方向、**尚未批准动手**）
+- **P1**：管理控制台 V2（安全策略开关、审计列表；V1 已实现，见 `docs/CONSOLE_PLAN.md`）
 - **P2**：M3 相机（`camera_photo` / `camera_video`）
 - **P3**：M4 下载安装 APK（`download_apk` / `install_apk`）
 - **P4**：M5 保活（前台服务、开机自启、断线告警）

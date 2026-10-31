@@ -219,6 +219,61 @@ type == 系统窗口(3) → -50
 - `ui` 还会返回 `win`（选中窗口的 pkg/type/focused/active）和 `popup_maybe`
   （存在「拿不到 root 的非全屏窗口」时给出提示——说明屏幕上有一层读不到的东西，改用截图）。
 
+## 管理控制台（可选）
+
+V1 只做三件事：看设备状态、增删 QQ 白名单、急停清队列。安全策略开关和审计列表留到 V2，
+接口已经按「适配器」隔开，加字段不用动 HTTP 层。
+
+- 开关：插件配置 `admin_token`
+  - 留空 → 首次启动自动生成 `secrets.token_urlsafe(24)` 并写回配置，日志打印
+    `[excalibur] 管理控制台：http://<IP>:8765/console?k=<token>`
+  - 填 `off` → 四个路由**完全不注册**（访问全是 404）
+  - 填其它值 → 用它当密钥
+- 鉴权：`X-Admin-Token` 头，或查询串 `?k=`；`hmac.compare_digest` 比较。
+  控制台页面错 `k` 回 **403**（不返回页面正文），JSON 接口错 token 回 **401** `{"ok":false,"error":"unauthorized"}`。
+- 防爆破：同一 IP 60 秒内失败满 10 次，之后统一回 **429**，锁 60 秒（内存计数，重启清零）。
+- 页面：`GET /console` 是单文件 HTML（CSS/JS 全内嵌，零外部请求），移动端可直接打开；
+  每 5 秒轮询一次 `/admin/state`。
+
+| 路由 | 方法 | 作用 |
+| --- | --- | --- |
+| `/console?k=<token>` | GET | 控制台页面 |
+| `/admin/state?k=<token>` | GET | 设备状态 + 白名单 + 最近 20 条审计 + 队列长度 + uptime |
+| `/admin/config?k=<token>` | POST | **只接受** `{"allowed_user_ids": ["10001","10002"]}` |
+| `/admin/stop?k=<token>` | POST | 清空排队任务，返回清掉的条数 |
+
+`/admin/state` 响应示例：
+
+```json
+{"ok": true, "online": true,
+ "device": {"device": "Pixel 9", "w": 1080, "h": 2400, "battery": 88, "cur_pkg": "com.tencent.mm"},
+ "config": {"allowed_user_ids": ["10001"], "rate_limit_per_minute": 20},
+ "audit": [{"ts": 1767225600.1, "kind": "admin", "ip": "100.64.0.2",
+            "change": {"allowed_user_ids": ["10001", "10002"]}}],
+ "queue": 0, "uptime_s": 3610.5}
+```
+
+`config` 里 V1 只暴露 `allowed_user_ids`（数组）和 `rate_limit_per_minute`，避免把 token 之类的东西带到页面。
+
+`/admin/config` 的规则：
+
+- 只处理 `allowed_user_ids`，**其它字段一律忽略**（不会顺手改掉 token / 限流）；
+- 列表至少保留一个号，否则 400「白名单至少要保留一个 QQ 号」；
+- 每个号必须是纯数字，否则 400「QQ 号必须是纯数字：xxx」；
+- 应用顺序：`config["allowed_user_ids"] = "a,b"` → `save_config()` → **就地重建 `SafetyPolicy`**
+  （不重载插件，会话和队列都不丢）→ 写一条 `kind="admin"` 审计；
+- 返回的 `applied` 是**落盘后回读**的真实值，不是请求里的原样回显。
+
+```json
+{"ok": true, "applied": {"allowed_user_ids": ["10001", "10002"], "rate_limit_per_minute": 20}}
+```
+
+`/admin/stop` 响应：
+
+```json
+{"ok": true, "cleared": 3}
+```
+
 ## 安全边界
 
 - 白名单之外的用户调用任何 `phone_*` 都被拒，并写审计日志。

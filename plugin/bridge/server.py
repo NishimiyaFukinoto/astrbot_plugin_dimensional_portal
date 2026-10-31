@@ -14,6 +14,7 @@ from __future__ import annotations
 import hmac
 import logging
 import time
+from pathlib import Path
 from typing import Any
 
 from aiohttp import web
@@ -32,6 +33,11 @@ except Exception:  # 脱离 AstrBot 单独跑测试（tests/ 里的脚本）
 
 MAX_POLL_WAIT_S = 30.0
 DEFAULT_MAX_BODY = 16 * 1024 * 1024  # 截图 base64 走这条通道，留足余量
+
+# 管理控制台：同一 IP 每分钟最多失败 10 次，超了锁 60 秒（内存计数，重启即清）
+ADMIN_MAX_FAILS = 10
+ADMIN_FAIL_WINDOW_S = 60.0
+CONSOLE_HTML_PATH = Path(__file__).with_name("console.html")
 
 
 def _token_match(supplied: str, expected: str) -> bool:
@@ -56,6 +62,8 @@ class PhoneBridgeServer:
         max_body: int = DEFAULT_MAX_BODY,
         policy: Any = None,
         debug_token: str = "",
+        admin_token: str = "",
+        console: Any = None,
     ) -> None:
         self.hub = hub
         self.token = token or ""
@@ -63,6 +71,12 @@ class PhoneBridgeServer:
         self.port = int(port)
         self.policy = policy
         self.debug_token = debug_token or ""
+        # 管理控制台是可选件：admin_token 为空 / "off" / 没给适配器，就完全不注册路由。
+        self.admin_token = (admin_token or "").strip()
+        self.console = console
+        self._admin_routes_added = False
+        self._admin_fails: dict[str, list[float]] = {}
+        self._console_html: str | None = None
         self._runner: web.AppRunner | None = None
         self._site: web.TCPSite | None = None
         self.started_at: float = 0.0
@@ -74,6 +88,84 @@ class PhoneBridgeServer:
         self.app.router.add_get("/healthz", self.handle_healthz)
         if self.debug_token:
             self.app.router.add_post("/debug/submit", self.handle_debug_submit)
+        self._ensure_admin_routes()
+
+    # ------------------------------------------------------------ 管理控制台
+
+    @property
+    def admin_enabled(self) -> bool:
+        return self._admin_routes_added
+
+    def _ensure_admin_routes(self) -> None:
+        """路由注册只做一次；没有适配器或 token 无效时保持 404。"""
+        if self._admin_routes_added:
+            return
+        if self.console is None or not self.admin_token or self.admin_token.lower() == "off":
+            return
+        self.app.router.add_get("/console", self.handle_console)
+        self.app.router.add_get("/admin/state", self.handle_admin_state)
+        self.app.router.add_post("/admin/config", self.handle_admin_config)
+        self.app.router.add_post("/admin/stop", self.handle_admin_stop)
+        self._admin_routes_added = True
+        log.info("[excalibur] 管理控制台已启用（/console）")
+
+    def enable_admin(self, admin_token: str) -> None:
+        """initialize() 里自动生成 admin_token 后补注册控制台路由。"""
+        self.admin_token = (admin_token or "").strip()
+        self._ensure_admin_routes()
+
+    def _admin_authorized(self, request: web.Request) -> bool:
+        supplied = request.headers.get("X-Admin-Token") or request.query.get("k") or ""
+        return _token_match(supplied, self.admin_token)
+
+    def _admin_throttled(self, ip: str) -> bool:
+        """同一 IP 60 秒内失败满 10 次就锁住（锁随窗口过期自动解除）。"""
+        now = time.monotonic()
+        hits = [t for t in self._admin_fails.get(ip, []) if now - t < ADMIN_FAIL_WINDOW_S]
+        self._admin_fails[ip] = hits
+        return len(hits) >= ADMIN_MAX_FAILS
+
+    def _admin_fail(self, ip: str) -> None:
+        self._admin_fails.setdefault(ip, []).append(time.monotonic())
+        # 顺手清掉过期的 IP，防止被人扫端口时 dict 无限涨
+        if len(self._admin_fails) > 64:
+            cutoff = time.monotonic() - ADMIN_FAIL_WINDOW_S
+            for key in [k for k, v in self._admin_fails.items() if not v or v[-1] < cutoff]:
+                self._admin_fails.pop(key, None)
+
+    def _admin_guard(self, request: web.Request) -> web.Response | None:
+        ip = self._client_ip(request)
+        if self._admin_throttled(ip):
+            log.warning(
+                "[excalibur] 管理控制台尝试过多 %s %s from %s",
+                request.method,
+                request.path,
+                ip,
+            )
+            return web.json_response({"ok": False, "error": "too many attempts"}, status=429)
+        if not self._admin_authorized(request):
+            self._admin_fail(ip)
+            return self._deny_admin(request)
+        return None
+
+    def _deny_admin(self, request: web.Request) -> web.Response:
+        log.warning(
+            "[excalibur] 管理控制台鉴权失败 %s %s from %s",
+            request.method,
+            request.path,
+            self._client_ip(request),
+        )
+        return web.json_response({"ok": False, "error": "unauthorized"}, status=401)
+
+    def _load_console_html(self) -> str | None:
+        if self._console_html is not None:
+            return self._console_html
+        try:
+            self._console_html = CONSOLE_HTML_PATH.read_text(encoding="utf-8")
+        except OSError as exc:
+            log.error("[excalibur] 读不到控制台页面 %s：%s", CONSOLE_HTML_PATH, exc)
+            return None
+        return self._console_html
 
     # ------------------------------------------------------------ 生命周期
 
@@ -258,6 +350,71 @@ class PhoneBridgeServer:
         except Exception as exc:  # 离线/超时/手机端报错：原样回给调用方
             return web.json_response({"ok": False, "error": str(exc)})
         return web.json_response({"ok": True, "data": data})
+
+    # ------------------------------------------------------------ 控制台接口
+
+    async def handle_console(self, request: web.Request) -> web.StreamResponse:
+        ip = self._client_ip(request)
+        if self._admin_throttled(ip):
+            log.warning("[excalibur] 管理控制台尝试过多 from %s", ip)
+            return web.Response(status=429, text="Too Many Requests")
+        if not self._admin_authorized(request):
+            self._admin_fail(ip)
+            log.warning("[excalibur] 管理控制台鉴权失败 from %s", ip)
+            return web.Response(status=403, text="Forbidden")
+        html = self._load_console_html()
+        if html is None:
+            return web.json_response({"ok": False, "error": "console.html 缺失"}, status=500)
+        resp = web.Response(text=html, content_type="text/html", charset="utf-8")
+        resp.headers["Cache-Control"] = "no-store, max-age=0"
+        resp.headers["Referrer-Policy"] = "no-referrer"
+        resp.headers["X-Frame-Options"] = "DENY"
+        resp.headers["Content-Security-Policy"] = (
+            "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'"
+        )
+        return resp
+
+    async def handle_admin_state(self, request: web.Request) -> web.StreamResponse:
+        guard = self._admin_guard(request)
+        if guard is not None:
+            return guard
+        snap = self.console.snapshot() or {}
+        return web.json_response(
+            {
+                "ok": True,
+                "online": self.hub.online,
+                "device": self.hub.device,
+                "config": snap.get("config") or {},
+                "audit": snap.get("audit") or [],
+                "queue": self.hub.queue_size,
+                "uptime_s": round(time.monotonic() - self.started_at, 1) if self.started_at else 0.0,
+            }
+        )
+
+    async def handle_admin_config(self, request: web.Request) -> web.StreamResponse:
+        guard = self._admin_guard(request)
+        if guard is not None:
+            return guard
+        try:
+            payload = await request.json(loads=loads)
+        except Exception:
+            return web.json_response({"ok": False, "error": "请求体必须是 JSON"}, status=400)
+        if not isinstance(payload, dict):
+            return web.json_response({"ok": False, "error": "请求体必须是 JSON 对象"}, status=400)
+        try:
+            applied = self.console.apply_config(payload, ip=self._client_ip(request))
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        log.info("[excalibur] 控制台改了白名单：%s", applied.get("allowed_user_ids"))
+        return web.json_response({"ok": True, "applied": applied})
+
+    async def handle_admin_stop(self, request: web.Request) -> web.StreamResponse:
+        guard = self._admin_guard(request)
+        if guard is not None:
+            return guard
+        cleared = int(self.console.stop_all())
+        log.info("[excalibur] 控制台急停：清掉排队任务 %s 个", cleared)
+        return web.json_response({"ok": True, "cleared": cleared})
 
 
 def _to_int(value: Any, default: int = 0) -> int:

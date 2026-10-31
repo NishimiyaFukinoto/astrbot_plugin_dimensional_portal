@@ -33,6 +33,13 @@
     "hint": "非空时启用 POST /debug/submit，仅用于本机联调；生产环境请留空。",
     "default": ""
   },
+  "admin_token": {
+    "type": "string",
+    "description": "管理控制台密钥",
+    "hint": "留空则首次启动自动生成并打到日志；填 off 彻底关闭控制台。",
+    "default": "",
+    "obvious_hint": true
+  },
   "rate_limit_per_minute": {
     "type": "int",
     "description": "每分钟操作上限",

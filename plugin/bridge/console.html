@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>我的圣剑 · 控制台</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --line: #262b35;
+    --text: #e6e9ef;
+    --muted: #8b93a3;
+    --accent: #7c9cff;
+    --ok: #3ddc97;
+    --warn: #ffb454;
+    --bad: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    padding: max(18px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  h1 { font-size: 19px; margin: 0; letter-spacing: .5px; font-weight: 650; }
+  h1 .dot { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .banner {
+    display: none; margin-bottom: 14px; padding: 10px 12px; border-radius: 10px;
+    background: rgba(255, 107, 107, .12); border: 1px solid rgba(255, 107, 107, .35);
+    color: #ffb3b3; font-size: 13px;
+  }
+  .banner.show { display: block; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px; margin-bottom: 14px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--muted); letter-spacing: .4px; }
+  .stat { display: flex; align-items: center; gap: 9px; font-size: 16px; margin-bottom: 12px; }
+  .pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .pulse.on { background: var(--ok); box-shadow: 0 0 0 4px rgba(61, 220, 151, .16); }
+  .pulse.off { background: var(--bad); box-shadow: 0 0 0 4px rgba(255, 107, 107, .12); }
+  dl { display: grid; grid-template-columns: 84px 1fr; gap: 7px 10px; margin: 0; font-size: 14px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; word-break: break-all; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 34px; margin-bottom: 12px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 2px; padding: 4px 6px 4px 10px;
+    border-radius: 999px; background: rgba(124, 156, 255, .12); border: 1px solid rgba(124, 156, 255, .3);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px;
+  }
+  .chip button {
+    border: 0; background: transparent; color: var(--muted); font-size: 17px; line-height: 1;
+    padding: 2px 6px; cursor: pointer; border-radius: 50%;
+  }
+  .chip button:hover { color: var(--bad); background: rgba(255, 107, 107, .12); }
+  .empty { color: var(--muted); font-size: 13px; align-self: center; }
+  .row { display: flex; gap: 8px; }
+  input[type="text"] {
+    flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: #10131a; color: var(--text);
+    font-size: 16px; outline: none;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  button.btn {
+    border: 1px solid var(--line); background: #1e2330; color: var(--text);
+    padding: 10px 16px; border-radius: 10px; font-size: 15px; cursor: pointer; white-space: nowrap;
+  }
+  button.btn:hover { border-color: var(--accent); }
+  button.btn.primary { background: var(--accent); border-color: var(--accent); color: #0b1020; font-weight: 600; }
+  button.btn.danger { background: rgba(255, 107, 107, .14); border-color: rgba(255, 107, 107, .45); color: #ffb3b3; }
+  button.btn:disabled { opacity: .5; cursor: default; }
+  .note { min-height: 20px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .note.ok { color: var(--ok); }
+  .note.bad { color: #ffb3b3; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 18px; }
+  @media (max-width: 380px) {
+    dl { grid-template-columns: 72px 1fr; }
+    .btn { padding: 10px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>我的圣剑<span class="dot">·</span>控制台</h1>
+    <span class="sub" id="updated">加载中</span>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <section class="card">
+    <h2>设备状态</h2>
+    <div class="stat">
+      <span class="pulse" id="pulse"></span>
+      <strong id="online-text">—</strong>
+      <span class="mono" id="device-id" style="color:var(--muted);font-weight:400"></span>
+    </div>
+    <dl>
+      <dt>机型</dt><dd id="model">—</dd>
+      <dt>分辨率</dt><dd id="screen-size">—</dd>
+      <dt>电量</dt><dd id="battery">—</dd>
+      <dt>前台应用</dt><dd class="mono" id="cur-pkg">—</dd>
+      <dt>无障碍</dt><dd id="accessibility">—</dd>
+      <dt>悬浮窗</dt><dd id="overlay">—</dd>
+      <dt>排队任务</dt><dd id="queue">—</dd>
+      <dt>运行时长</dt><dd id="uptime">—</dd>
+    </dl>
+  </section>
+
+  <section class="card">
+    <h2>QQ 白名单</h2>
+    <div class="chips" id="chips"></div>
+    <div class="row">
+      <input type="text" id="qq-input" inputmode="numeric" autocomplete="off"
+             placeholder="输入 QQ 号，回车添加">
+      <button class="btn primary" id="add-btn" type="button">添加</button>
+    </div>
+    <div class="note" id="whitelist-note">只有名单里的 QQ 号能让圣剑操控手机。至少保留一个。</div>
+  </section>
+
+  <section class="card">
+    <h2>急停</h2>
+    <button class="btn danger" id="stop-btn" type="button">清空所有排队任务</button>
+    <div class="note" id="stop-note">只清空还没下发的任务；已经在手机上执行的动作无法撤回。</div>
+  </section>
+
+  <footer>每 5 秒自动刷新 · 密钥只在本页地址里，请勿转发</footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var K = '';
+  var timer = null;
+  var timerStopped = false;
+  var lastIds = [];
+  var busy = false;
+
+  try {
+    K = new URLSearchParams(window.location.search).get('k') || '';
+  } catch (err) {
+    K = '';
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  function setText(id, text) {
+    var el = $(id);
+    if (el) { el.textContent = text; }
+  }
+
+  function showBanner(text) {
+    var el = $('banner');
+    el.textContent = text;
+    el.className = 'banner show';
+  }
+
+  function hideBanner() {
+    var el = $('banner');
+    el.textContent = '';
+    el.className = 'banner';
+  }
+
+  function note(id, text, kind) {
+    var el = $(id);
+    el.textContent = text;
+    el.className = 'note' + (kind ? ' ' + kind : '');
+  }
+
+  function withKey(path) {
+    return path + (path.indexOf('?') >= 0 ? '&' : '?') + 'k=' + encodeURIComponent(K);
+  }
+
+  function api(path, options) {
+    options = options || {};
+    return fetch(withKey(path), {
+      method: options.method || 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      body: options.body,
+      cache: 'no-store',
+      credentials: 'omit'
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (!res.ok || !data || data.ok !== true) {
+          var err = new Error((data && data.error) || ('HTTP ' + res.status));
+          err.status = res.status;
+          throw err;
+        }
+        return data;
+      });
+    });
+  }
+
+  function stopPolling(message) {
+    timerStopped = true;
+    if (timer) { clearInterval(timer); timer = null; }
+    if (message) { showBanner(message); }
+  }
+
+  function fmtUptime(seconds) {
+    var s = Math.max(0, Math.round(Number(seconds) || 0));
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    if (h > 0) { return h + ' 小时 ' + m + ' 分'; }
+    if (m > 0) { return m + ' 分 ' + (s % 60) + ' 秒'; }
+    return s + ' 秒';
+  }
+
+  function renderDevice(state) {
+    var dev = state.device || {};
+    var online = state.online === true;
+    var pulse = $('pulse');
+    pulse.className = 'pulse ' + (online ? 'on' : 'off');
+    setText('online-text', online ? '手机在线' : '手机离线');
+    setText('device-id', dev.device_id || '');
+    setText('model', dev.device || dev.model || '—');
+    setText('screen-size', (dev.w && dev.h) ? (dev.w + ' × ' + dev.h) : '—');
+
+    var battery = '—';
+    if (dev.battery !== undefined && dev.battery !== null && dev.battery !== '') {
+      battery = dev.battery + '%';
+      if (dev.charging) { battery += ' · 充电中'; }
+    }
+    setText('battery', battery);
+    setText('cur-pkg', dev.cur_pkg || '—');
+    setText('accessibility', dev.accessibility ? '已开启' : '未开启');
+    if (dev.overlay === true) { setText('overlay', '守卫开启'); }
+    else if (dev.overlay === false) { setText('overlay', '守卫关闭' + (dev.overlay_note ? '（' + dev.overlay_note + '）' : '')); }
+    else { setText('overlay', '未上报'); }
+    setText('queue', String(state.queue || 0) + ' 个任务');
+    setText('uptime', fmtUptime(state.uptime_s));
+
+    var now = new Date();
+    setText('updated', '更新于 ' + now.toLocaleTimeString('zh-CN', { hour12: false }));
+  }
+
+  function renderChips(ids) {
+    lastIds = ids.slice();
+    var box = $('chips');
+    while (box.firstChild) { box.removeChild(box.firstChild); }
+    if (!ids.length) {
+      var empty = document.createElement('span');
+      empty.className = 'empty';
+      empty.textContent = '白名单是空的（正常情况不会发生）';
+      box.appendChild(empty);
+      return;
+    }
+    ids.forEach(function (id) {
+      var chip = document.createElement('span');
+      chip.className = 'chip';
+      var label = document.createElement('span');
+      label.textContent = id;
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.setAttribute('aria-label', '删除 ' + id);
+      del.textContent = '×';
+      del.addEventListener('click', function () { removeId(id); });
+      chip.appendChild(label);
+      chip.appendChild(del);
+      box.appendChild(chip);
+    });
+  }
+
+  function applyIds(ids, okText) {
+    if (busy) { return Promise.resolve(); }
+    busy = true;
+    $('add-btn').disabled = true;
+    return api('/admin/config', {
+      method: 'POST',
+      body: JSON.stringify({ allowed_user_ids: ids })
+    }).then(function (data) {
+      var applied = (data.applied && data.applied.allowed_user_ids) || [];
+      renderChips(applied);
+      note('whitelist-note', okText || '已保存', 'ok');
+      hideBanner();
+    }).catch(function (err) {
+      note('whitelist-note', err.message || '保存失败', 'bad');
+      if (err.status === 401 || err.status === 403) { stopPolling('密钥无效或已过期，请用日志里的新地址重新打开。'); }
+      if (err.status === 429) { stopPolling('失败次数太多，已锁定 60 秒。'); }
+    }).then(function () {
+      busy = false;
+      $('add-btn').disabled = false;
+    });
+  }
+
+  function removeId(id) {
+    var left = lastIds.filter(function (x) { return x !== id; });
+    if (!left.length) {
+      note('whitelist-note', '至少要保留一个 QQ 号，不能删光。', 'bad');
+      return;
+    }
+    applyIds(left, '已删除 ' + id);
+  }
+
+  function addId() {
+    var input = $('qq-input');
+    var value = (input.value || '').trim();
+    if (!value) { return; }
+    if (!/^\d+$/.test(value)) {
+      note('whitelist-note', 'QQ 号只能是数字。', 'bad');
+      return;
+    }
+    if (lastIds.indexOf(value) >= 0) {
+      note('whitelist-note', '这个号已经在名单里了。', 'bad');
+      return;
+    }
+    var next = lastIds.concat([value]);
+    applyIds(next, '已添加 ' + value).then(function () { input.value = ''; });
+  }
+
+  function loadState() {
+    if (timerStopped) { return; }
+    api('/admin/state').then(function (state) {
+      hideBanner();
+      renderDevice(state);
+      var cfg = state.config || {};
+      renderChips((cfg.allowed_user_ids || []).map(String));
+    }).catch(function (err) {
+      if (err.status === 401 || err.status === 403) {
+        stopPolling('密钥无效：请用日志里的 /console?k=… 地址重新打开。');
+      } else if (err.status === 429) {
+        stopPolling('失败次数太多，已锁定 60 秒。');
+      } else {
+        showBanner('连不上插件：' + (err.message || '未知错误'));
+      }
+    });
+  }
+
+  function stopAll() {
+    var btn = $('stop-btn');
+    btn.disabled = true;
+    note('stop-note', '正在清空…');
+    api('/admin/stop', { method: 'POST' }).then(function (data) {
+      note('stop-note', '已清空 ' + (data.cleared || 0) + ' 个排队任务。', 'ok');
+    }).catch(function (err) {
+      note('stop-note', '急停失败：' + (err.message || '未知错误'), 'bad');
+    }).then(function () {
+      btn.disabled = false;
+      loadState();
+    });
+  }
+
+  $('add-btn').addEventListener('click', addId);
+  $('qq-input').addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); addId(); }
+  });
+  $('stop-btn').addEventListener('click', stopAll);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { loadState(); }
+  });
+
+  if (!K) {
+    showBanner('地址里缺少 k 参数：请用日志里打印的 /console?k=… 地址打开本页。');
+    setText('updated', '未连接');
+    return;
+  }
+
+  loadState();
+  timer = setInterval(function () {
+    if (!document.hidden) { loadState(); }
+  }, 5000);
+})();
+</script>
+</body>
+</html>

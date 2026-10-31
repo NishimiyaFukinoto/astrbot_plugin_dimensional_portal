@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+### 新增
+- 管理控制台 V1：`admin_token` 留空时首次启动自动生成并写回配置（启动日志打印完整地址），
+  手机浏览器走 Tailscale 也能打开 `/console`；能看设备状态、增删 QQ 白名单（chips 交互）、一键急停清队列
+- 控制台接口：`/admin/state`、`/admin/config`（只改白名单，返回落盘回读值）、`/admin/stop`；
+  鉴权 `X-Admin-Token` 或 `?k=`，错 k 页面 403 / 接口 401，同 IP 失败 10 次锁 60 秒（429）
+- 白名单改动就地重建 `SafetyPolicy` 并写 `kind="admin"` 审计，不需要重载插件；`admin_token: "off"` 时四个路由完全不注册
+
 ### 安全
 - 敏感截图二次校验：截图后用手机回报的**真实前台包名 + UI 文字**再查一次，命中直接丢弃，
   不落临时文件、不发到 QQ（心跳可能落后 10 秒，只查心跳会漏）
@@ -34,6 +41,7 @@
 - `live_server.py` 20 → 46 项：截图 TOCTOU、UI 关键词、中文名黑名单、写操作门槛、overlay 透传、
   `open_app` 诊断、坐标越界、`/debug/submit` 200、非 ASCII token、冷启动
 - 新增 `tools/check_es5.py`：扫 `phone/*.js` 里禁止的 ES6 语法
+- 新增 `tests/admin_console_test.py`（40 项）：鉴权/防爆破/白名单增删/急停清队列/自动生成 token/`off` 全 404
 
 ### CI
 - `astrbot` 集成测试由非阻塞改为阻塞
@@ -44,7 +52,7 @@
 - M3：相机拍照 / 录像
 - M4：下载 APK 并调起安装
 - M5：前台服务保活、断线重连加固
-- 管理控制台（网页里改白名单与安全开关，见 `docs/CONSOLE_PLAN.md`）
+- 管理控制台 V2（安全策略开关、审计列表）
 
 ## [0.2.0] - 2026-10-31
 
