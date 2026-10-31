@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/logo.png" width="132" alt="Excalibur">
+
 # 我的圣剑 · Excalibur
 
 **让 QQ 上的 AI 帮你操作自己的安卓手机**
