@@ -1,72 +1,83 @@
 {
   "token": {
     "type": "string",
-    "description": "手机与插件之间的共享密钥，必须和 excalibur_agent.js 里的 TOKEN 一字不差。留空则插件不会启动 HTTP 服务",
-    "hint": "自己编一个长字符串，比如 32 位随机字母数字；手机端和这里要完全一致",
+    "description": "手机端共享密钥",
+    "hint": "须与 excalibur_agent.js 中的 TOKEN 一致；留空则不启动 HTTP 服务。",
     "default": "",
     "obvious_hint": true
   },
   "listen_host": {
     "type": "string",
-    "description": "监听地址。0.0.0.0 = 所有网卡（局域网/Tailscale 都能连）",
+    "description": "监听地址",
+    "hint": "默认 0.0.0.0，监听全部网卡（局域网、Tailscale 均可访问）。",
     "default": "0.0.0.0"
   },
   "listen_port": {
     "type": "int",
-    "description": "监听端口。被占用时改这里再重载插件",
+    "description": "监听端口",
+    "hint": "默认 8765；修改后需重载插件。",
     "default": 8765
   },
   "allowed_user_ids": {
     "type": "string",
-    "description": "允许操控手机的用户 QQ 号，逗号分隔。留空 = 不限制（危险，仅调试用）",
+    "description": "允许的 QQ 号",
+    "hint": "逗号分隔；留空表示不限制，仅建议调试时使用。",
     "default": "",
     "obvious_hint": true
   },
   "debug_token": {
     "type": "string",
-    "description": "调试专用密钥。非空时开启 POST /debug/submit（直接给手机下发任务，不经过大模型），仅用于本机联调；正式使用请清空",
-    "default": "",
-    "hint": "清空后 /debug/submit 直接不存在，最安全"
+    "description": "调试密钥",
+    "hint": "非空时启用 POST /debug/submit，仅用于本机联调；生产环境请留空。",
+    "default": ""
   },
   "rate_limit_per_minute": {
     "type": "int",
-    "description": "每个用户每分钟最多下发多少个手机操作",
+    "description": "每分钟操作上限",
+    "hint": "单个用户 60 秒内允许下发的任务数。",
     "default": 20
   },
   "task_timeout_ms": {
     "type": "int",
-    "description": "单个任务默认超时（毫秒）。截图类内部会自己放宽",
+    "description": "任务超时（毫秒）",
+    "hint": "单个任务的默认超时；截图类任务会自动放宽。",
     "default": 20000
   },
   "offline_after_seconds": {
     "type": "int",
-    "description": "多少秒没收到心跳就算手机掉线",
+    "description": "离线判定（秒）",
+    "hint": "超过该时长未收到心跳即视为手机离线。",
     "default": 40
   },
   "screenshot_quality": {
     "type": "int",
-    "description": "截图转 JPG 的质量（1-95）。太大就调小",
+    "description": "截图质量",
+    "hint": "JPG 质量，范围 1–95；数值越大越清晰、体积越大。",
     "default": 55
   },
   "max_screenshot_kb": {
     "type": "int",
-    "description": "单张截图允许的最大体积（KB），超过就拒绝发送并提示调低质量",
+    "description": "截图体积上限（KB）",
+    "hint": "超过该值的截图会被拒绝发送。",
     "default": 1500
   },
   "allow_screenshot_sensitive": {
     "type": "bool",
-    "description": "是否允许在敏感界面（微信/支付宝/银行/设置）截图并推到 QQ。默认关闭",
+    "description": "敏感界面截图",
+    "hint": "开启后允许在微信、支付宝、银行等界面截图；默认关闭。",
     "default": false,
     "obvious_hint": true
   },
   "sensitive_packages": {
     "type": "string",
-    "description": "敏感应用包名，逗号分隔。留空使用内置默认列表",
+    "description": "敏感应用包名",
+    "hint": "逗号分隔；留空时使用内置列表。",
     "default": ""
   },
   "package_blacklist": {
     "type": "string",
-    "description": "禁止启动/安装的包名，逗号分隔。留空使用内置默认列表",
+    "description": "包名黑名单",
+    "hint": "禁止启动或安装的包名，逗号分隔；留空时使用内置列表。",
     "default": ""
   }
 }
