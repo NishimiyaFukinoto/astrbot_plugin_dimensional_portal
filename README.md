@@ -67,13 +67,14 @@ QQ  ←→  腾讯  ←→  NapCat  ←→  AstrBot  ←→  本插件 (aiohttp 
 
 ### 第 1 步：装插件
 
-**方式 A（推荐）**：AstrBot WebUI → 插件 → 安装插件 → 填入仓库地址：
+**方式 A（最省事）**：打开 [Releases](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/releases/latest)，下载附件 `astrbot_plugin_excalibur.zip`，
+在 AstrBot WebUI → 插件 → 安装插件 → **导入压缩包**，选这个 zip 即可（不需要 git、不需要命令行）。
+
+**方式 B**：同样在「安装插件」里直接填仓库地址：
 
 ```
 https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur
 ```
-
-**方式 B**：在 [Releases](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/releases/latest) 下载源码压缩包，用 WebUI 的「导入压缩包」安装。
 
 **方式 C**：手动把本仓库的 `plugin/` 整个目录拷到：
 
