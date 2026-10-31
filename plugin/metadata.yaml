@@ -4,5 +4,5 @@ desc: 让 AstrBot 通过 QQ 远程操控安卓手机：截图看界面、点击�
 short_desc: QQ 远程操控安卓手机
 version: 0.2.0
 author: 我的圣剑
-repo: "https://github.com/USERNAME/astrbot_plugin_excalibur"
+repo: "https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur"
 astrbot_version: ">=4.29.0"
