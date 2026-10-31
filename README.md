@@ -1,12 +1,25 @@
-# 我的圣剑 · Excalibur（excalibur-phone-bridge）
+<div align="center">
 
-[![tests](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/actions/workflows/tests.yml/badge.svg)](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/actions/workflows/tests.yml)
-[![release](https://img.shields.io/github/v/release/NishimiyaFukinoto/astrbot_plugin_excalibur?display_name=tag)](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/releases)
-[![license](https://img.shields.io/github/license/NishimiyaFukinoto/astrbot_plugin_excalibur)](LICENSE)
-[![python](https://img.shields.io/badge/python-3.10%2B-blue)](docs/INSTALL.md)
-[![AstrBot](https://img.shields.io/badge/AstrBot-%E2%89%A54.29.0-blueviolet)](https://github.com/AstrBotDevs/AstrBot)
+# 我的圣剑 · Excalibur
 
-让 QQ 上的「大肥鱼」远程操控你的 Android 手机。**唯一的大脑是 AstrBot 里的模型，手机上不装第二个模型。**
+**让 QQ 上的 AI 帮你操作自己的安卓手机**
+
+<a href="https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/releases/latest"><img src="https://img.shields.io/github/v/release/NishimiyaFukinoto/astrbot_plugin_excalibur?display_name=tag&label=release" alt="release"></a>
+<a href="https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/actions/workflows/tests.yml"><img src="https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/actions/workflows/tests.yml/badge.svg" alt="tests"></a>
+<a href="LICENSE"><img src="https://img.shields.io/github/license/NishimiyaFukinoto/astrbot_plugin_excalibur" alt="license"></a>
+<img src="https://img.shields.io/badge/AstrBot-%E2%89%A54.29.0-blueviolet" alt="AstrBot">
+<img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python">
+<img src="https://img.shields.io/badge/Android-8%2B-green" alt="Android">
+
+`截图` · `点击 / 滑动 / 长按` · `输入文字` · `打开应用` · `按文字找控件` · `远程可用`
+
+</div>
+
+---
+
+在 QQ 里跟「大肥鱼」说一句「看看我手机现在什么界面」，它就会截图发给你；说「打开微信」，手机自己就开了。
+
+**唯一的大脑是 AstrBot 里的模型，手机上不装第二个模型** —— 手机只是「手」，不负责思考。
 
 ```
 QQ  ←→  腾讯  ←→  NapCat  ←→  AstrBot  ←→  本插件 (aiohttp :8765)  ←→  手机 AutoX.js
@@ -14,130 +27,290 @@ QQ  ←→  腾讯  ←→  NapCat  ←→  AstrBot  ←→  本插件 (aiohttp 
                                    LLM 调 phone_* 工具
 ```
 
-手机在 CGNAT 后面不能当服务端，所以永远是**手机主动长轮询**电脑；电脑不开公网端口。
-
-> 当前状态：**M0 + M1 已完成并在真机验证**；M2（找文字）已提前完成；M3 相机 / M4 装 APK / M5 保活 暂停。
-> 详细进度见 [docs/STATUS.md](docs/STATUS.md)；下一步的「管理控制台」方案见 [docs/CONSOLE_PLAN.md](docs/CONSOLE_PLAN.md)（讨论稿，未实现）。
-
-## 依赖与兼容性
-
-| 组件 | 要求 | 说明 |
-| --- | --- | --- |
-| AstrBot | ≥ 4.29.0（实测 4.29.3） | 插件走 `metadata.yaml` + `_conf_schema.json`，`< 4.10` 不再支持 |
-| Python | 3.10+（实测 3.12.16） | 只用标准库 + aiohttp（AstrBot 自带） |
-| 手机端 | Android 8+（实测 Android 15） | 需要 AutoX.js（无障碍，不需要 root） |
-| 网络 | 局域网或 Tailscale 等内网 | 不需要公网 IP、不需要端口映射 |
-| 即时通讯 | NapCat（aiocqhttp 反向 WS） | 其他 AstrBot 适配器理论上也行，未测 |
-
-## 现在能做什么（M0 + M1）
-
-| 能力 | 工具 |
-| --- | --- |
-| 看状态（在线/电量/分辨率/前台应用/权限） | `phone_status` |
-| 截图发到 QQ + 界面文字摘要 | `phone_see` |
-| 读界面控件树（文字、坐标、可点/输入） | `phone_ui` |
-| 点击 / 长按 / 滑动 | `phone_tap` `phone_long_press` `phone_swipe` |
-| 输入文字（含提交） / 按系统键 | `phone_type` `phone_key` |
-| 打开应用 | `phone_open_app` |
-| 找文字并点（M2 提前做了） | `phone_find_tap` |
-| 急停 | `phone_stop` |
-
-M3（相机拍照录像）、M4（下载安装 APK）、M5（保活/审计/限流加固）见 [docs/PLAN.md](docs/PLAN.md)。
-M3 目前暂停。
-
-**进度大纲（什么做完了、什么没做、下一步）：[docs/STATUS.md](docs/STATUS.md)**
-
-### 真机验证状态（2026-10-31，vivo V2171A / Android 15 / 1080×2400）
-
-- 心跳/长轮询 ✅（掉线自动重连）
-- 截图 → QQ ✅（q55 JPEG ≈ 117KB）
-- UI 树 ✅ 长按菜单/弹窗也能读到
-- tap / long_press / swipe / text / key ✅
-- `open_app` ✅ 微信 944ms、QQ 764ms、哔哩哔哩 2717ms，都能从后台打开
-  （靠脚本自建的 1×1 悬浮窗拿到 Android 的后台启动豁免；必须给 AutoX.js 悬浮窗权限）
-- `find_text` / `wait` ✅
-- 白名单 / 限流 / 敏感界面 / 审计 / 急停 ✅
-- 远程可用 ✅ 走 Tailscale 内网（电脑 `100.x.x.1` ↔ 手机 `100.x.x.2`），
-  手机用流量也能连；脚本内置「连不上就切局域网地址」的兜底
+手机通常在 CGNAT/移动网络后面，不能当服务端，所以永远是 **手机主动长轮询电脑**；
+电脑不需要公网 IP、不需要端口映射，配好 Tailscale 后手机用流量也能控制。
 
 ## 目录
 
-```
-excalibur-phone-bridge/
-├── plugin/                  → 拷到 AstrBot 的 core/data/plugins/astrbot_plugin_excalibur
-│   ├── main.py              插件入口：起 HTTP 服务 + 注册 11 个 LLM 工具
-│   ├── metadata.yaml        插件元数据
-│   ├── _conf_schema.json    WebUI 里的配置项
-│   ├── bridge/
-│   │   ├── protocol.py      协议常量（动作名、任务 id、JSON 工具）
-│   │   ├── hub.py           任务队列 + 长轮询唤醒 + 心跳状态机
-│   │   └── server.py        aiohttp：/hb /poll /result /healthz（+ 可选 /debug/submit）
-│   └── safety/
-│       └── policy.py        白名单、限流、包名黑名单、敏感界面、审计日志
-├── phone/
-│   └── excalibur_agent.js     手机端 AutoX.js 脚本
-├── tests/
-│   ├── smoke_test.py        假手机客户端跑通整条链路（不需要真机）
-│   ├── live_server.py       真插件类 + 真 aiohttp + 假手机，直接调工具函数
-│   └── import_check.py      在真实 AstrBot 环境里验证工具注册
-├── tools/
-│   ├── dbg.py               通过 /debug/submit 确定性下发动作（回归用）
-│   ├── uiview.py            把 UI 树结果整理成可读文本
-│   └── dash.py / reload_plugin.py   面板 API 探测与插件重载
-│        环境变量：ASTRBOT_INSTANCE（实例目录）、ASTRBOT_DASH_PORT（面板端口）、
-│                  EXCALIBUR_BRIDGE / EXCALIBUR_DEBUG_TOKEN（回归用）
-└── docs/
-    ├── STATUS.md            进度大纲（已完成 / 待办 P0–P5 / 平台边界）
-    ├── CONSOLE_PLAN.md      管理控制台执行方案（讨论稿）
-    ├── PROTOCOL.md          通信协议（改协议先看这个）
-    ├── INSTALL.md           安装与排错
-    └── PLAN.md              里程碑、决策记录、已知风险、调试手册
-```
+- [功能一览](#功能一览)
+- [快速开始](#快速开始)
+- [示例对话](#示例对话)
+- [推荐配置](#推荐配置)
+- [已知限制](#已知限制)
+- [安全须知](#安全须知)
+- [常见问题](#常见问题)
+- [更多文档](#更多文档)
+- [Roadmap](#roadmap)
+- [贡献指南](#贡献指南)
+- [开发与测试](#开发与测试)
+- [依赖](#依赖)
+- [免责声明](#免责声明)
+- [致谢](#致谢)
+
+## 功能一览
+
+| 场景 | 能力 | 对应工具 |
+| --- | --- | --- |
+| 看手机 | 截图直接发到 QQ，并附上界面文字摘要 | `phone_see` |
+| 看界面 | 读出控件树：文字、坐标、能不能点/能不能输入 | `phone_ui` |
+| 看状态 | 在线、电量、分辨率、前台应用、三项权限是否就绪 | `phone_status` |
+| 点 | 按坐标点击、长按、滑动 | `phone_tap` `phone_long_press` `phone_swipe` |
+| 打字 | 给当前输入框写字，可顺手点「发送/搜索」 | `phone_type` |
+| 按键 | 返回、主页、最近任务、音量 | `phone_key` |
+| 开应用 | 按包名或应用名启动（微信也能从后台拉起） | `phone_open_app` |
+| 找东西 | 按屏幕上的文字找控件并点掉 | `phone_find_tap` |
+| 急停 | 清空待执行任务，手机立刻停手 | `phone_stop` |
 
 ## 快速开始
 
-1. 手机和电脑都装 Tailscale 并登录同一账号，记下电脑的 `100.x` 地址
-   （`"C:\Program Files\Tailscale\tailscale.exe" ip -4`）。
-2. 手机上装 AutoX.js，把脚本顶部的 `BASES` 第一个地址改成电脑的 `100.x`、`TOKEN` 对上插件配置，
-   运行并允许「屏幕录制」+ 开无障碍 + 开悬浮窗权限。
-3. 把 `plugin/` 拷到 AstrBot 的插件目录，重载插件（见 [docs/INSTALL.md](docs/INSTALL.md)）。
-4. AstrBot WebUI → 插件配置里填好自己的 QQ 号（白名单）。
-5. 在 QQ 里对「大肥鱼」说：**看看手机现在什么界面**。
+### 第 1 步：装插件
 
-## 自测
+**方式 A（推荐）**：AstrBot WebUI → 插件 → 安装插件 → 填入仓库地址：
 
-```bash
-# 不需要真机：假手机客户端跑通 心跳 → 长轮询 → 执行 → 回传（27 项）
-python tests/smoke_test.py
-
-# 真插件类 + 真 aiohttp + 假手机，直接调工具函数（20 项）
-python tests/live_server.py
-
-# 用 AstrBot 自己的 venv 验证 11 个工具都能注册（docstring → JSON Schema）
-python tests/import_check.py
-
-# 真机回归（需要插件里临时配了 debug_token）
-EXCALIBUR_DEBUG_TOKEN=xxx python tools/dbg.py '{"action":"status"}'
+```
+https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur
 ```
 
-Windows 控制台是 GBK，脚本输出里的 emoji 可能触发 `UnicodeEncodeError`；
-三套测试都自带了 `sys.stdout.reconfigure(encoding="utf-8", errors="replace")`，重定向到文件再读即可。
+**方式 B**：在 [Releases](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/releases/latest) 下载源码压缩包，用 WebUI 的「导入压缩包」安装。
+
+**方式 C**：手动把本仓库的 `plugin/` 整个目录拷到：
+
+```
+<AstrBot 实例目录>/core/data/plugins/astrbot_plugin_excalibur/
+```
+
+> [!IMPORTANT]
+> 装完一定要在 WebUI 里填两个配置，否则插件不干活：
+> `token`（手机和插件共用的密钥，随便编一段长字符串）与 `allowed_user_ids`（你自己的 QQ 号）。
+> **`token` 留空时插件会拒绝启动 HTTP 服务**——这是故意的，防止裸奔。
+
+### 第 2 步：装手机端
+
+1. 手机上安装 [AutoX.js](https://github.com/autox-community/AutoX)（开源无障碍自动化，不需要 root）。
+2. 把 [`phone/excalibur_agent.js`](phone/excalibur_agent.js) 传到手机，用 AutoX.js 打开，改文件顶部的两处：
+
+```js
+var BASES = [
+    "http://100.x.y.z:8765",     // 电脑的 Tailscale 地址（推荐）
+    "http://192.168.1.10:8765"   // 局域网地址（同一 WiFi 时更快）
+];
+var TOKEN = "和插件配置里一模一样的 token";
+```
+
+> 查电脑的 Tailscale 地址：`tailscale ip -4`，通常形如 `100.64.x.x`。
+
+3. 点「运行」，按提示依次允许：
+
+| 权限 | 为什么必须 |
+| --- | --- |
+| 屏幕录制 | 截图；Android 14/15 记得把「共享范围」选成 **整个屏幕** |
+| 无障碍服务 | 点击、读界面、打字全靠它 |
+| 悬浮窗（显示在其他应用上层） | Android 10+ 的后台启动限制要靠它豁免，**没它打不开微信这类应用**；脚本会自己挂一个 1×1 几乎透明的窗口 |
+
+4. 建议再把 AutoX.js 加入电池优化白名单，防止被系统杀后台。
+
+### 第 3 步：试一句
+
+在 QQ 里对「大肥鱼」说：
+
+```
+看看我手机现在什么界面
+```
+
+收到截图就说明整条链路通了。之后可以继续：
+
+```
+帮我打开微信  →  点一下搜索框  →  搜「文件传输助手」
+```
+
+## 示例对话
+
+| 你在 QQ 里说 | 大致发生了什么 |
+| --- | --- |
+| 看看手机现在什么界面 | `phone_see`：截图 + 界面文字摘要发回 QQ |
+| 屏幕上都有什么按钮 | `phone_ui`：列出可点控件和坐标 |
+| 帮我打开哔哩哔哩 | `phone_open_app`：后台启动，失败会说明原因 |
+| 点一下「设置」 | `phone_find_tap`：按文字找，找不到会列出候选 |
+| 往上滑一下 | `phone_swipe`：从屏幕中部上滑 |
+| 在搜索框里输入「天气」并搜索 | `phone_find_tap` + `phone_type`（自动点搜索按钮） |
+| 按一下返回 | `phone_key` |
+| 停 | `phone_stop`：清空队列，手机立刻停手 |
+
+## 推荐配置
+
+| 配置 | 建议 |
+| --- | --- |
+| `token` | **必填**，手机脚本和插件保持一致，留空插件不启动 |
+| `allowed_user_ids` | **必填**，填你自己的 QQ 号；多人测试用逗号分隔 |
+| `listen_host` | 只在内网用保持 `0.0.0.0`；想更保守就绑 Tailscale 的 IP |
+| `screenshot_quality` | 默认 `55`；觉得糊可以调到 70–80，流量吃紧就降 |
+| `allow_screenshot_sensitive` | 默认关；微信/支付宝/银行/设置类界面不截图，需要再开 |
+| `rate_limit_per_minute` | 默认 20；嫌机器人"手太快"可以降到 10 |
+| `debug_token` | **正式使用请留空**；非空会开一个能绕过白名单的调试接口 |
+
+<details>
+<summary>完整配置项（13 项）</summary>
+
+| 配置 | 说明 | 默认值 |
+| --- | --- | --- |
+| `token` | 手机与插件的共享密钥，必须和脚本里 `TOKEN` 一致；留空则不启动 HTTP 服务 | 空 |
+| `listen_host` | 监听地址，`0.0.0.0` 表示所有网卡 | `0.0.0.0` |
+| `listen_port` | 监听端口，被占用时改这里再重载 | `8765` |
+| `allowed_user_ids` | 允许操控手机的 QQ 号，逗号分隔；留空＝不限制（危险） | 空 |
+| `debug_token` | 非空时开启 `POST /debug/submit`（绕过白名单/限流，仅供本机联调） | 空 |
+| `rate_limit_per_minute` | 每个用户每分钟最多下发多少个手机操作 | `20` |
+| `task_timeout_ms` | 单个任务默认超时（毫秒）；截图类内部会放宽 | `20000` |
+| `offline_after_seconds` | 多少秒没收到心跳算掉线 | `40` |
+| `screenshot_quality` | 截图转 JPG 的质量（1–95） | `55` |
+| `max_screenshot_kb` | 单张截图最大体积（KB），超过就拒绝发送 | `1500` |
+| `allow_screenshot_sensitive` | 是否允许在敏感界面（微信/支付/银行/设置）截图并发到 QQ | `false` |
+| `sensitive_packages` | 敏感应用包名，逗号分隔；留空用内置列表 | 空 |
+| `package_blacklist` | 禁止启动/安装的包名，逗号分隔；留空用内置列表 | 空 |
+
+</details>
+
+## 已知限制
+
+> [!WARNING]
+> 下面是硬限制，不是配置问题：
+
+| 限制 | 说明 |
+| --- | --- |
+| 锁屏状态 | 无法解锁、无法亮屏操作；息屏时截图会是全黑 |
+| 悬浮窗权限 | 没给的话，微信这类应用会「启动请求发出去了但前台没变」 |
+| 应用跳转确认框 | vivo/iQOO 可能弹「想要打开 XX」，点一次「始终打开」后不再问 |
+| 无障碍屏蔽 | 少数 App（部分银行、游戏反作弊）会主动屏蔽无障碍，读不到界面 |
+| 输入法 | 优先 `setText`，失败会退到剪贴板粘贴；个别输入法仍可能失败 |
+| 回车键 | 无 root 时无法注入任意按键，`enter` 是靠找「发送/搜索」按钮实现的 |
+
+M3（相机拍照录像）、M4（下载安装 APK）、M5（前台保活加固）**尚未实现**，见 [Roadmap](#roadmap)。
 
 ## 安全须知
 
-- **只在可信网络里跑**。插件默认监听 `0.0.0.0:8765`，没有内置 TLS；对外暴露请套反向代理或只绑 Tailscale 地址。
-- **`token` 必须改**。插件配置里的手机端 `token` 留空时，插件会拒绝启动 HTTP 服务（防止裸奔）。
-- **白名单必须非空**。`allowed_user_ids` 为空等于不限制，任何能给机器人发消息的人都能驱动你的手机。
-- **敏感界面默认不截图**（支付、密码、验证码、银行类包名），需要时再单独打开。
-- **调试口默认关闭**。`debug_token` 非空才会注册 `/debug/submit`，它能绕过白名单与限流，用完请清空。
+- **只在可信网络里跑**。插件默认监听 `0.0.0.0:8765` 且没有内置 TLS；要暴露到公网请套反向代理。
+- **`token` 必须改**，且不要提交到仓库。
+- **白名单必须非空**。`allowed_user_ids` 为空等于任何能给机器人发消息的人都能操作你的手机。
+- **敏感界面默认不截图**（支付、密码、验证码、银行类）。
+- **调试口默认关闭**，`debug_token` 用完记得清空。
+- 所有操作都会写审计日志：`<AstrBot 实例目录>/core/data/plugin_data/astrbot_plugin_excalibur/audit.jsonl`。
+
+## 常见问题
+
+<details>
+<summary>说「看看手机」没反应 / 提示手机不在线</summary>
+
+1. 手机上的 AutoX.js 脚本在跑吗？（AutoX 的「运行中脚本」列表刷新较慢，切出去再回来才准）
+2. 脚本里的 `TOKEN` 和插件配置里的 `token` 是否一字不差？
+3. `BASES` 第一个地址是电脑的 Tailscale/局域网地址吗？先用手机浏览器打开 `http://<电脑IP>:8765/healthz` 试试。
+4. 电脑防火墙有没有拦截 8765 端口。
+</details>
+
+<details>
+<summary>截图是全黑的</summary>
+
+手机息屏了。先让手机亮屏（或把自动锁屏时间调长），再截图。
+</details>
+
+<details>
+<summary>能打开设置，但打不开微信</summary>
+
+先确认 AutoX.js 有**悬浮窗权限**（Android 设置 → 应用 → AutoX.js → 显示在其他应用上层）。
+脚本会自己挂一个 1×1 的透明悬浮窗来拿「后台启动 Activity」的豁免，没有这个权限就会被系统静默拦截。
+vivo/iQOO 还可能在第一次弹「应用跳转」确认框，点「始终打开」。
+</details>
+
+<details>
+<summary>打字没进去</summary>
+
+先「点一下输入框」再输入。脚本会依次尝试 `setText` → 全局 `setText` → 剪贴板粘贴。
+</details>
+
+<details>
+<summary>端口 8765 被占用</summary>
+
+改插件配置的 `listen_port`，重载插件，同时把手机脚本里的端口一起改掉。
+</details>
+
+<details>
+<summary>不用 Tailscale，只用同一个 WiFi 行吗</summary>
+
+行。把 `BASES` 里的局域网地址放第一位即可；脚本连不上时会自动在几个地址之间切换。
+</details>
+
+## 更多文档
+
+| 文档 | 内容 |
+| --- | --- |
+| [docs/INSTALL.md](docs/INSTALL.md) | 完整安装步骤、权限细节、排错表 |
+| [docs/PROTOCOL.md](docs/PROTOCOL.md) | 通信协议：三个端点、动作表、返回结构 |
+| [docs/PLAN.md](docs/PLAN.md) | 里程碑、决策记录、已知风险、调试手册 |
+| [docs/STATUS.md](docs/STATUS.md) | 进度大纲（已完成 / 待办 P0–P5 / 平台边界） |
+| [docs/CONSOLE_PLAN.md](docs/CONSOLE_PLAN.md) | 管理控制台方案（讨论稿，未实现） |
+
+## Roadmap
+
+| 方向 | 说明 | 状态 |
+| --- | --- | --- |
+| M1 基础操作 | 截图、UI 树、点击滑动、输入、开应用 | ✅ 已完成 |
+| M2 找文字 | 按文字定位控件并点击 | ✅ 已完成 |
+| M3 相机 | 拍照、录像并回传到 QQ | ⏸ 暂停 |
+| M4 装应用 | 下载 APK 并调起安装（需手动确认） | ⏸ 待做 |
+| M5 保活加固 | 前台服务、断线重连、限流与审计完善 | ⏸ 待做 |
+| 管理控制台 | 网页里改白名单与安全开关（见 CONSOLE_PLAN） | 💬 讨论中 |
+| 更多平台 | 其他 IM 适配器（未测试） | 💬 待讨论 |
+
+## 贡献指南
+
+欢迎 issue 和 PR。
+
+**提 Issue**
+
+- [Bug 报告](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/issues/new?template=bug_report.md)：附插件版本、AstrBot 版本、手机型号与 Android 版本、复现步骤、脱敏后的日志。
+- [功能建议](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/issues/new?template=feature_request.md)：说明使用场景，以及为什么现有工具做不到。
+
+**提 PR**
+
+- 用 [PR 模板](.github/pull_request_template.md)，写清改动范围、验证方式、是否影响协议。
+- 改协议（`plugin/bridge/protocol.py` 或动作表）时，请同步更新 `docs/PROTOCOL.md` 与手机脚本。
+- 提交前请跑一遍 [开发与测试](#开发与测试) 里的三套测试。
+
+## 开发与测试
+
+```bash
+# 不需要真机：假手机客户端跑通 心跳 → 长轮询 → 执行 → 回传（27 项断言）
+python tests/smoke_test.py
+
+# 真插件类 + 真 aiohttp + 假手机，直接调工具函数（20 项断言）
+python tests/live_server.py
+
+# 在 AstrBot 环境里验证 11 个工具都能注册（docstring → JSON Schema）
+python tests/import_check.py
+```
+
+`live_server.py` / `import_check.py` 会优先找本机的 AstrBot 实例（可用 `ASTRBOT_INSTANCE` 指定），
+找不到就用当前环境安装的 `astrbot` 包；CI 里跑的是后者。
+
+真机回归可以用 `tools/dbg.py` 直接下发动作（需要临时开 `debug_token`）：
+
+```bash
+EXCALIBUR_DEBUG_TOKEN=xxx python tools/dbg.py '{"action":"status"}'
+```
+
+## 依赖
+
+```text
+aiohttp      # AstrBot 自带；插件只用它 + 标准库
+```
+
+手机端额外需要 [AutoX.js](https://github.com/autox-community/AutoX)（Android App，无需 root）。
 
 ## 免责声明
 
-本项目仅供个人在自己的设备上做自动化实验使用。使用者需自行确保：
+本项目仅供个人在自己的设备上做自动化实验。使用前请确认：
 
-- 手机是**你自己的**，或你已获得机主的明确授权；
-- 使用方式符合 QQ / 腾讯、AstrBot、AutoX.js 及所在地法律法规的要求；
-- 不要用它做刷量、群控、监控他人等违规用途。
+- 手机是**你自己的**，或已获得机主明确授权；
+- 使用方式符合 QQ/腾讯、AstrBot、AutoX.js 的条款及当地法律法规；
+- 不要用于刷量、群控、监控他人等违规用途。
 
 由此产生的一切后果由使用者承担，作者不承担任何责任。
 
@@ -146,6 +319,7 @@ Windows 控制台是 GBK，脚本输出里的 emoji 可能触发 `UnicodeEncodeE
 - [AstrBot](https://github.com/AstrBotDevs/AstrBot) —— 插件宿主与 LLM 工具注册
 - [NapCat](https://github.com/NapNeko/NapCatQQ) —— QQ 协议端
 - [AutoX.js](https://github.com/autox-community/AutoX) —— 手机端无障碍自动化
+- [Tailscale](https://tailscale.com/) —— 内网穿透（可选）
 
 ## License
 
