@@ -154,21 +154,21 @@ var TOKEN = "和插件配置里一模一样的 token";
 <details>
 <summary>完整配置项（13 项）</summary>
 
-| 配置 | 说明 | 默认值 |
+| 配置项（面板显示名） | 说明 | 默认值 |
 | --- | --- | --- |
-| `token` | 手机与插件的共享密钥，必须和脚本里 `TOKEN` 一致；留空则不启动 HTTP 服务 | 空 |
-| `listen_host` | 监听地址，`0.0.0.0` 表示所有网卡 | `0.0.0.0` |
-| `listen_port` | 监听端口，被占用时改这里再重载 | `8765` |
-| `allowed_user_ids` | 允许操控手机的 QQ 号，逗号分隔；留空＝不限制（危险） | 空 |
-| `debug_token` | 非空时开启 `POST /debug/submit`（绕过白名单/限流，仅供本机联调） | 空 |
-| `rate_limit_per_minute` | 每个用户每分钟最多下发多少个手机操作 | `20` |
-| `task_timeout_ms` | 单个任务默认超时（毫秒）；截图类内部会放宽 | `20000` |
-| `offline_after_seconds` | 多少秒没收到心跳算掉线 | `40` |
-| `screenshot_quality` | 截图转 JPG 的质量（1–95） | `55` |
-| `max_screenshot_kb` | 单张截图最大体积（KB），超过就拒绝发送 | `1500` |
-| `allow_screenshot_sensitive` | 是否允许在敏感界面（微信/支付/银行/设置）截图并发到 QQ | `false` |
-| `sensitive_packages` | 敏感应用包名，逗号分隔；留空用内置列表 | 空 |
-| `package_blacklist` | 禁止启动/安装的包名，逗号分隔；留空用内置列表 | 空 |
+| `token`（手机端共享密钥） | 须与 `excalibur_agent.js` 的 `TOKEN` 一致；留空则不启动 HTTP 服务 | 空 |
+| `listen_host`（监听地址） | `0.0.0.0` 表示监听全部网卡 | `0.0.0.0` |
+| `listen_port`（监听端口） | 被占用时修改此项并重载插件 | `8765` |
+| `allowed_user_ids`（允许的 QQ 号） | 逗号分隔；留空表示不限制，仅建议调试时使用 | 空 |
+| `debug_token`（调试密钥） | 非空时启用 `POST /debug/submit`（绕过白名单与限流，仅供本机联调） | 空 |
+| `rate_limit_per_minute`（每分钟操作上限） | 单用户 60 秒内允许的任务数 | `20` |
+| `task_timeout_ms`（任务超时） | 单位毫秒；截图类任务自动放宽 | `20000` |
+| `offline_after_seconds`（离线判定） | 超过该时长未收到心跳即视为离线 | `40` |
+| `screenshot_quality`（截图质量） | JPG 质量，1–95 | `55` |
+| `max_screenshot_kb`（截图体积上限） | 超过该值的截图会被拒绝发送 | `1500` |
+| `allow_screenshot_sensitive`（敏感界面截图） | 是否允许在微信/支付/银行/设置界面截图 | `false` |
+| `sensitive_packages`（敏感应用包名） | 逗号分隔；留空使用内置列表 | 空 |
+| `package_blacklist`（包名黑名单） | 禁止启动/安装的包名，逗号分隔；留空使用内置列表 | 空 |
 
 </details>
 
