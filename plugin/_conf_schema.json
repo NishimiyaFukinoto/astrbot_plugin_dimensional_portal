@@ -1,0 +1,72 @@
+{
+  "token": {
+    "type": "string",
+    "description": "手机与插件之间的共享密钥，必须和 dafeiyu_agent.js 里的 TOKEN 一字不差。留空则插件不会启动 HTTP 服务",
+    "hint": "自己编一个长字符串，比如 32 位随机字母数字；手机端和这里要完全一致",
+    "default": "",
+    "obvious_hint": true
+  },
+  "listen_host": {
+    "type": "string",
+    "description": "监听地址。0.0.0.0 = 所有网卡（局域网/Tailscale 都能连）",
+    "default": "0.0.0.0"
+  },
+  "listen_port": {
+    "type": "int",
+    "description": "监听端口。被占用时改这里再重载插件",
+    "default": 8765
+  },
+  "allowed_user_ids": {
+    "type": "string",
+    "description": "允许操控手机的用户 QQ 号，逗号分隔。留空 = 不限制（危险，仅调试用）",
+    "default": "",
+    "obvious_hint": true
+  },
+  "debug_token": {
+    "type": "string",
+    "description": "调试专用密钥。非空时开启 POST /debug/submit（直接给手机下发任务，不经过大模型），仅用于本机联调；正式使用请清空",
+    "default": "",
+    "hint": "清空后 /debug/submit 直接不存在，最安全"
+  },
+  "rate_limit_per_minute": {
+    "type": "int",
+    "description": "每个用户每分钟最多下发多少个手机操作",
+    "default": 20
+  },
+  "task_timeout_ms": {
+    "type": "int",
+    "description": "单个任务默认超时（毫秒）。截图类内部会自己放宽",
+    "default": 20000
+  },
+  "offline_after_seconds": {
+    "type": "int",
+    "description": "多少秒没收到心跳就算手机掉线",
+    "default": 40
+  },
+  "screenshot_quality": {
+    "type": "int",
+    "description": "截图转 JPG 的质量（1-95）。太大就调小",
+    "default": 55
+  },
+  "max_screenshot_kb": {
+    "type": "int",
+    "description": "单张截图允许的最大体积（KB），超过就拒绝发送并提示调低质量",
+    "default": 1500
+  },
+  "allow_screenshot_sensitive": {
+    "type": "bool",
+    "description": "是否允许在敏感界面（微信/支付宝/银行/设置）截图并推到 QQ。默认关闭",
+    "default": false,
+    "obvious_hint": true
+  },
+  "sensitive_packages": {
+    "type": "string",
+    "description": "敏感应用包名，逗号分隔。留空使用内置默认列表",
+    "default": ""
+  },
+  "package_blacklist": {
+    "type": "string",
+    "description": "禁止启动/安装的包名，逗号分隔。留空使用内置默认列表",
+    "default": ""
+  }
+}
