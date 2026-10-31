@@ -3,7 +3,7 @@
 例：
   venv/Scripts/python.exe tools/dash.py GET /api/plugins
   venv/Scripts/python.exe tools/dash.py GET /api/plugins/failed
-  venv/Scripts/python.exe tools/dash.py POST /api/plugin/reload '{"name":"astrbot_plugin_shengjian"}'
+  venv/Scripts/python.exe tools/dash.py POST /api/plugin/reload '{"name":"astrbot_plugin_excalibur"}'
 """
 
 from __future__ import annotations

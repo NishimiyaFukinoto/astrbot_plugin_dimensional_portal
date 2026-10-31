@@ -17,9 +17,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-BASE = os.environ.get("SHENGJIAN_BRIDGE", "http://127.0.0.1:8765")
+BASE = os.environ.get("EXCALIBUR_BRIDGE", "http://127.0.0.1:8765")
 # 和插件配置里的 debug_token 保持一致；没填就让 /debug/submit 空着（返回 404）
-DEBUG_TOKEN = os.environ.get("SHENGJIAN_DEBUG_TOKEN", "")
+DEBUG_TOKEN = os.environ.get("EXCALIBUR_DEBUG_TOKEN", "")
 OUT = Path(__file__).resolve().parent.parent / "tmp" / "dbg_out.jsonl"
 
 

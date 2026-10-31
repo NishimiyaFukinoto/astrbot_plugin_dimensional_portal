@@ -1,7 +1,7 @@
 # 通信协议 v1
 
 电脑（插件）和手机（AutoX.js 脚本）之间的全部约定。改任何一边都要同步这里和
-`plugin/bridge/protocol.py`、`phone/shengjian_agent.js` 里的 `AGENT_VERSION` / `PROTOCOL_VERSION`。
+`plugin/bridge/protocol.py`、`phone/excalibur_agent.js` 里的 `AGENT_VERSION` / `PROTOCOL_VERSION`。
 
 ## 角色
 
@@ -86,7 +86,7 @@ token 在插件配置里设置，手机脚本顶部 `TOKEN` 必须一致。用 `
 ### `GET /healthz` — 存活探测（免 token）
 
 ```json
-{"ok": true, "service": "shengjian-phone-bridge", "online": true, "queue": 0, "uptime_s": 123.4, "ts": 1761...}
+{"ok": true, "service": "excalibur-phone-bridge", "online": true, "queue": 0, "uptime_s": 123.4, "ts": 1761...}
 ```
 
 手机浏览器打开 `http://电脑IP:8765/healthz` 能看到这个，就说明网络通了。
@@ -200,6 +200,6 @@ type == 系统窗口(3) → -50
 - 每用户每分钟最多 20 次下发（可配）。
 - 敏感应用（微信、支付宝、银行、设置等）默认**不截图**，只允许读 UI 文字。
 - `package_blacklist` 里的包名禁止 `open_app`；M4 的安装动作也要过这一关。
-- 审计日志写在 AstrBot 的 `data/plugin_data/astrbot_plugin_shengjian/audit.jsonl`
+- 审计日志写在 AstrBot 的 `data/plugin_data/astrbot_plugin_excalibur/audit.jsonl`
   （旧版本没有 `get_astrbot_plugin_data_path` 时退回插件目录下的 `data/`），字段
   `{"ts","kind","user","action","params",...}`，`kind` 有 `task` / `deny_user` / `deny_rate` / `emergency_stop`。

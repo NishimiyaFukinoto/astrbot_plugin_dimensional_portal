@@ -62,7 +62,7 @@ UI 层），实际做法是**点相机 App 的快门按钮**，或者用 `intent
 | 7 | 工具全部定义在 `main.py` | AstrBot 的 handler 绑定按 `handler_module_path == metadata.module_path` 精确匹配，子模块里的 `@filter.llm_tool` 绑不上插件实例。 |
 | 8 | 不用 `@register` 装饰器 | v4.29 里已废弃（`star/register/star.py` 打 DeprecationWarning），靠 `metadata.yaml` 声明即可。 |
 | 9 | 插件根目录**不放** `__init__.py` | `star_manager._get_modules` 只认 `main.py` / 同名 `.py`，命名空间包导入方式（`data.plugins.<dir>.main`）本来就不需要它。 |
-| 10 | 相对导入（`from .bridge.hub import`） | 插件以 `data.plugins.astrbot_plugin_shengjian.main` 全名导入，`__package__` 正确，相对导入可用；这样拷贝目录时不用改任何 import。 |
+| 10 | 相对导入（`from .bridge.hub import`） | 插件以 `data.plugins.astrbot_plugin_excalibur.main` 全名导入，`__package__` 正确，相对导入可用；这样拷贝目录时不用改任何 import。 |
 | 11 | 手机端用 **窗口打分** 取「当前界面」，不用 `currentPackage()` | 实体机上 `getWindows()` 里常年躺着 `com.vivo.upslide`（type=3）和输入法（type=2）；直接 `currentPackage()` 会被输入法顶掉，按顺序取第一个非 IME 窗口又会被 ups​​lide 抢走。改成 `focused(+200) > active(+60) > 应用窗口(+50)`、输入法 -1000、无 root -400、最后按窗口顺序微调。 |
 | 12 | UI 采集用 **BFS** 而不是 DFS | 长按菜单/弹窗这类 overlay 节点天生「浅层、在树的后半段」，DFS 一头扎进桌面背景列表，`max_nodes` 一截断就永远照不到弹窗。换成队列遍历，并过滤掉无文字/无描述/不可点/不可输入的纯容器，`max_nodes` 才花在有用的节点上。 |
 | 13 | 为「从后台打开应用」**自建一个 1×1 悬浮窗** | Android 10+ 禁止后台启动 Activity，官方豁免之一是「有 SYSTEM_ALERT_WINDOW 权限 **且当前有可见窗口**」。实测：有权限但没有窗口时，微信/QQ/哔哩哔哩全部静默失败（vivo 连跳转框都不弹）；加上窗口后三者一次成功、`bounced=False`。用 `WindowManager.addView` + `type=2038`，`alpha=0.01`（完全透明可能被判不可见）。 |
@@ -111,4 +111,4 @@ UI 层），实际做法是**点相机 App 的快门按钮**，或者用 `intent
 9. **`adb shell` 里的绝对路径会被 Git Bash 改写**（`/sdcard/x` → `C:/Program Files/Git/sdcard/x`），
    先 `export MSYS_NO_PATHCONV=1`；`adb push` 的源路径要写 `F:/...` 而不是 `/f/...`。
 10. **AutoX 编辑器工具栏的坐标**（1080 宽）：`run` 在 (681,198)、`action_log` (567,198)、`edit` (57,198)；
-    主页最近文件「shengjian_agent」在 (498,1290)。脚本路径 `/storage/emulated/0/脚本/shengjian_agent.js`。
+    主页最近文件「excalibur_agent」在 (498,1290)。脚本路径 `/storage/emulated/0/脚本/excalibur_agent.js`。

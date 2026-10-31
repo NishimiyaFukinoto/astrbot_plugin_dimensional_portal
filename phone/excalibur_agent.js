@@ -64,7 +64,7 @@ function nowMs() {
 }
 
 function log(msg) {
-    console.log("[shengjian] " + msg);
+    console.log("[excalibur] " + msg);
 }
 
 function sleepSafe(ms) {
@@ -488,7 +488,7 @@ function actScreen(job) {
     if (!img) throw new Error("截图失败：没有屏幕录制权限，请在 AutoX.js 里重新运行脚本并允许「屏幕录制」");
 
     var dir = context.getExternalFilesDir(null).getAbsolutePath();
-    var path = dir + "/shengjian_shot.jpg";
+    var path = dir + "/excalibur_shot.jpg";
     try {
         images.save(img, path, "jpg", quality);
     } finally {

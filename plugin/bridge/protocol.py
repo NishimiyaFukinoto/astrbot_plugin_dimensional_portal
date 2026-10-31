@@ -14,7 +14,7 @@ from typing import Any
 PROTOCOL_VERSION = 1
 
 # ---------------------------------------------------------------- 动作名
-# 手机端 executor 里的 switch 分支必须和这里一一对应（见 phone/shengjian_agent.js）。
+# 手机端 executor 里的 switch 分支必须和这里一一对应（见 phone/excalibur_agent.js）。
 ACT_SCREEN = "screen"
 ACT_UI = "ui"
 ACT_TAP = "tap"

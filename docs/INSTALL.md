@@ -18,7 +18,7 @@
    > 用 `phone_status` 能看到 `overlay: true`（`overlay_note` 会写失败原因）。
    > vivo/iQOO 如果仍然打不开，再去 **i管家 → 应用管理 → 权限管理 → 权限 → 后台弹出界面**
    > 里允许 AutoX.js。
-3. 把 `phone/shengjian_agent.js` 传到手机（QQ 发给自己 → 用 AutoX.js 打开，或放到
+3. 把 `phone/excalibur_agent.js` 传到手机（QQ 发给自己 → 用 AutoX.js 打开，或放到
    `/sdcard/脚本/` 后在 AutoX.js 里导入）。**改完脚本一定要在 AutoX.js 里重新点「运行」**，
    否则手机上跑的还是旧代码。
 4. 改文件顶部的地址和 token（`BASES` 是候选服务器列表，第一个 Tailscale、第二个局域网，
@@ -52,7 +52,7 @@ var TOKEN = "<你的手机端 token>";         // 必须和插件配置里的 to
 把本仓库的 `plugin/` 整个目录拷到 AstrBot 的插件目录，并**改名为插件名**：
 
 ```
-<AstrBot 实例目录>\core\data\plugins\astrbot_plugin_shengjian\
+<AstrBot 实例目录>\core\data\plugins\astrbot_plugin_excalibur\
 ├── main.py
 ├── metadata.yaml
 ├── _conf_schema.json
@@ -60,7 +60,7 @@ var TOKEN = "<你的手机端 token>";         // 必须和插件配置里的 to
 └── safety\
 ```
 
-即 `plugin\*` → `...\core\data\plugins\astrbot_plugin_shengjian\*`。
+即 `plugin\*` → `...\core\data\plugins\astrbot_plugin_excalibur\*`。
 
 拷完在 WebUI → 插件管理 → 重载插件，或者重启 AstrBot。
 （WebUI 端口由启动器分配，每次启动可能不一样，以启动器窗口里显示的地址为准；
@@ -69,7 +69,7 @@ var TOKEN = "<你的手机端 token>";         // 必须和插件配置里的 to
 日志里应该看到：
 
 ```
-[shengjian] 就绪：请让手机上的 AutoX.js 脚本连 http://<电脑IP>:8765
+[excalibur] 就绪：请让手机上的 AutoX.js 脚本连 http://<电脑IP>:8765
 ```
 
 如果没有，看是不是端口被占用（`netstat -ano | findstr 8765`），改配置里的 `listen_port` 再重载。
@@ -80,7 +80,7 @@ var TOKEN = "<你的手机端 token>";         // 必须和插件配置里的 to
 没弹或点了取消，就手动加一条入站规则：
 
 ```
-netsh advfirewall firewall add rule name="shengjian 8765" dir=in action=allow protocol=TCP localport=8765
+netsh advfirewall firewall add rule name="excalibur 8765" dir=in action=allow protocol=TCP localport=8765
 ```
 
 （这条需要在管理员 PowerShell 里跑。）

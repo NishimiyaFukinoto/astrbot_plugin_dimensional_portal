@@ -1,7 +1,7 @@
 {
   "token": {
     "type": "string",
-    "description": "手机与插件之间的共享密钥，必须和 shengjian_agent.js 里的 TOKEN 一字不差。留空则插件不会启动 HTTP 服务",
+    "description": "手机与插件之间的共享密钥，必须和 excalibur_agent.js 里的 TOKEN 一字不差。留空则插件不会启动 HTTP 服务",
     "hint": "自己编一个长字符串，比如 32 位随机字母数字；手机端和这里要完全一致",
     "default": "",
     "obvious_hint": true

@@ -72,7 +72,7 @@ class PhoneBridgeServer:
         await self._site.start()
         self.started_at = time.monotonic()
         log.info(
-            "[shengjian] HTTP 服务已启动 http://%s:%s（token %s）",
+            "[excalibur] HTTP 服务已启动 http://%s:%s（token %s）",
             self.host,
             self.port,
             "已设置" if self.token else "未设置（危险）",
@@ -83,7 +83,7 @@ class PhoneBridgeServer:
             await self._runner.cleanup()
             self._runner = None
             self._site = None
-            log.info("[shengjian] HTTP 服务已停止")
+            log.info("[excalibur] HTTP 服务已停止")
 
     @property
     def running(self) -> bool:
@@ -105,7 +105,7 @@ class PhoneBridgeServer:
 
     def _deny(self, request: web.Request, reason: str) -> web.Response:
         log.warning(
-            "[shengjian] 拒绝 %s %s from %s：%s",
+            "[excalibur] 拒绝 %s %s from %s：%s",
             request.method,
             request.path,
             self._client_ip(request),
@@ -141,7 +141,7 @@ class PhoneBridgeServer:
         }
         resp = self.hub.on_heartbeat(info)
         log.debug(
-            "[shengjian] 心跳 %s %sx%s 电量 %s%% 前台 %s",
+            "[excalibur] 心跳 %s %sx%s 电量 %s%% 前台 %s",
             info["device_id"],
             info["w"],
             info["h"],
@@ -182,7 +182,7 @@ class PhoneBridgeServer:
         error = payload.get("error")
         accepted = self.hub.on_result(task_id, ok, data, error)
         log.info(
-            "[shengjian] 结果 %s %s%s",
+            "[excalibur] 结果 %s %s%s",
             task_id,
             "成功" if ok else "失败",
             "" if accepted else "（已被丢弃：超时或未知任务）",
@@ -193,7 +193,7 @@ class PhoneBridgeServer:
         return web.json_response(
             {
                 "ok": True,
-                "service": "shengjian-phone-bridge",
+                "service": "excalibur-phone-bridge",
                 "online": self.hub.online,
                 "queue": self.hub.queue_size,
                 "uptime_s": round(time.monotonic() - self.started_at, 1)
@@ -230,7 +230,7 @@ class PhoneBridgeServer:
             return web.json_response({"ok": False, "error": "bad params"}, status=400)
         timeout_ms = _to_int(payload.get("timeout_ms"), 20000)
 
-        log.info("[shengjian] 调试任务 %s %s", action, params)
+        log.info("[excalibur] 调试任务 %s %s", action, params)
         try:
             data = await self.hub.submit(action, params, timeout_ms=timeout_ms)
         except Exception as exc:  # 离线/超时/手机端报错：原样回给调用方
