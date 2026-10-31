@@ -14,6 +14,7 @@ audit.jsonl
 tmp/
 *.png
 !docs/*.png
+!assets/*.png
 
 # 手机端脚本的临时备份
 phone/*.bak
