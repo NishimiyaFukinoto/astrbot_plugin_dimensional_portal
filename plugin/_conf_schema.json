@@ -2,52 +2,36 @@
   "token": {
     "type": "string",
     "description": "手机端共享密钥",
-    "hint": "必填。要与手机脚本 excalibur_agent.js 里的 TOKEN 完全一致；留空则插件不启动 HTTP 服务。",
+    "hint": "须与 excalibur_agent.js 中的 TOKEN 一致；留空则不启动 HTTP 服务。",
     "default": "",
-    "obvious_hint": true
-  },
-  "allowed_user_ids": {
-    "type": "string",
-    "description": "允许的 QQ 号",
-    "hint": "必填。逗号分隔，只有这些 QQ 号能指挥手机；留空表示不限制（仅调试用）。",
-    "default": "",
-    "obvious_hint": true
-  },
-  "listen_port": {
-    "type": "int",
-    "description": "监听端口",
-    "hint": "默认 8765。被别的程序占用时才需要改，改完要重载插件。",
-    "default": 8765,
-    "minimum": 1,
-    "maximum": 65535
-  },
-  "allow_screenshot_sensitive": {
-    "type": "bool",
-    "description": "敏感界面截图",
-    "hint": "开启后允许在微信、支付宝、银行等界面截图并把图发到 QQ；默认关闭。",
-    "default": false,
-    "obvious_hint": true
-  },
-  "allow_sensitive_write": {
-    "type": "bool",
-    "description": "敏感界面写操作",
-    "hint": "开启后允许在微信、支付宝、银行等界面点击/输入；默认关闭，只允许看界面。",
-    "default": false,
     "obvious_hint": true
   },
   "listen_host": {
     "type": "string",
     "description": "监听地址",
-    "hint": "默认 0.0.0.0（监听全部网卡）。",
-    "default": "0.0.0.0",
-    "invisible": true
+    "hint": "默认 0.0.0.0，监听全部网卡（局域网、Tailscale 均可访问）。",
+    "default": "0.0.0.0"
+  },
+  "listen_port": {
+    "type": "int",
+    "description": "监听端口",
+    "hint": "默认 8765；修改后需重载插件。",
+    "default": 8765,
+    "minimum": 1,
+    "maximum": 65535
+  },
+  "allowed_user_ids": {
+    "type": "string",
+    "description": "允许的 QQ 号",
+    "hint": "逗号分隔；留空表示不限制，仅建议调试时使用。",
+    "default": "",
+    "obvious_hint": true
   },
   "debug_token": {
     "type": "string",
     "description": "调试密钥",
     "hint": "非空时启用 POST /debug/submit，仅用于本机联调；生产环境请留空。",
-    "default": "",
-    "invisible": true
+    "default": ""
   },
   "rate_limit_per_minute": {
     "type": "int",
@@ -55,8 +39,7 @@
     "hint": "单个用户 60 秒内允许下发的任务数。",
     "default": 20,
     "minimum": 1,
-    "maximum": 600,
-    "invisible": true
+    "maximum": 600
   },
   "task_timeout_ms": {
     "type": "int",
@@ -64,8 +47,7 @@
     "hint": "单个任务的默认超时；截图类任务会自动放宽。",
     "default": 20000,
     "minimum": 1000,
-    "maximum": 120000,
-    "invisible": true
+    "maximum": 120000
   },
   "offline_after_seconds": {
     "type": "int",
@@ -73,17 +55,15 @@
     "hint": "超过该时长未收到心跳即视为手机离线。",
     "default": 40,
     "minimum": 5,
-    "maximum": 600,
-    "invisible": true
+    "maximum": 600
   },
   "screenshot_quality": {
     "type": "int",
     "description": "截图质量",
-    "hint": "JPG 质量，范围 1–95；越大越清晰、体积越大。",
+    "hint": "JPG 质量，范围 1–95；数值越大越清晰、体积越大。",
     "default": 55,
     "minimum": 1,
-    "maximum": 95,
-    "invisible": true
+    "maximum": 95
   },
   "max_screenshot_kb": {
     "type": "int",
@@ -91,21 +71,32 @@
     "hint": "超过该值的截图会被拒绝发送。",
     "default": 1500,
     "minimum": 100,
-    "maximum": 20000,
-    "invisible": true
+    "maximum": 20000
+  },
+  "allow_screenshot_sensitive": {
+    "type": "bool",
+    "description": "敏感界面截图",
+    "hint": "开启后允许在微信、支付宝、银行等界面截图；默认关闭。",
+    "default": false,
+    "obvious_hint": true
+  },
+  "allow_sensitive_write": {
+    "type": "bool",
+    "description": "敏感界面写操作",
+    "hint": "开启后允许在微信、支付宝、银行等界面点击/输入；默认关闭，只允许看。",
+    "default": false,
+    "obvious_hint": true
   },
   "sensitive_packages": {
     "type": "string",
     "description": "敏感应用包名",
     "hint": "逗号分隔；留空时使用内置列表。",
-    "default": "",
-    "invisible": true
+    "default": ""
   },
   "package_blacklist": {
     "type": "string",
     "description": "包名黑名单",
     "hint": "禁止启动或安装的包名，逗号分隔；留空时使用内置列表。",
-    "default": "",
-    "invisible": true
+    "default": ""
   }
 }
