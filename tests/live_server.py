@@ -28,25 +28,27 @@ import aiohttp
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-def _find_instance() -> Path:
-    """AstrBot 实例目录：优先环境变量 ASTRBOT_INSTANCE，否则取启动器下的第一个实例。"""
+def _find_instance() -> Path | None:
+    """AstrBot 实例目录：优先环境变量 ASTRBOT_INSTANCE，否则取启动器下的第一个实例。
+
+    找不到时返回 None —— 此时直接用当前环境已安装的 astrbot 包（CI 里就是这种情况）。
+    """
     env = os.environ.get("ASTRBOT_INSTANCE")
     if env:
         return Path(env)
     base = Path.home() / ".astrbot_launcher" / "instances"
     cands = sorted(p for p in base.glob("*") if (p / "core").is_dir()) if base.is_dir() else []
-    if not cands:
-        raise SystemExit(
-            "找不到 AstrBot 实例：请设置环境变量 ASTRBOT_INSTANCE 指向实例目录（含 core/ 的那层）"
-        )
-    return cands[0]
+    return cands[0] if cands else None
 
 
 INSTANCE = _find_instance()
-CORE = INSTANCE / "core"
+CORE = (INSTANCE / "core") if INSTANCE else None
 PLUGIN = Path(__file__).resolve().parents[1] / "plugin"
 
-for _p in (str(CORE), str(PLUGIN.parent)):
+if CORE is None:
+    print("[提示] 没找到本地 AstrBot 实例，改为使用当前环境已安装的 astrbot 包")
+
+for _p in ([str(CORE)] if CORE else []) + [str(PLUGIN.parent)]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 

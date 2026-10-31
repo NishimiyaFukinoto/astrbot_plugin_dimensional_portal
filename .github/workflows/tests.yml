@@ -1,0 +1,59 @@
+name: tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: 冒烟测试（协议 + 安全，不需要 AstrBot）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 安装依赖
+        run: python -m pip install --upgrade pip aiohttp
+
+      - name: Python 语法检查
+        run: python -m compileall -q plugin tests tools
+
+      - name: 手机脚本语法检查（AutoX.js 用的是 Rhino，这里只查 ES5 语法）
+        run: node --check phone/excalibur_agent.js
+
+      - name: 冒烟测试（27 项断言）
+        run: python tests/smoke_test.py
+
+  astrbot:
+    name: 集成测试（真实 AstrBot 环境）
+    runs-on: ubuntu-latest
+    # AstrBot 依赖较重，PyPI 抖动时可能装不上；这一层不阻塞主流程
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装 AstrBot
+        run: python -m pip install --upgrade pip aiohttp "AstrBot>=4.29.0"
+
+      - name: 工具注册检查（11 个 phone_* 工具）
+        run: python tests/import_check.py
+
+      - name: 真插件类 + 真 aiohttp（20 项断言）
+        run: python tests/live_server.py

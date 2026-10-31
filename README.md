@@ -1,5 +1,11 @@
 # 我的圣剑 · Excalibur（excalibur-phone-bridge）
 
+[![tests](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/actions/workflows/tests.yml/badge.svg)](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/actions/workflows/tests.yml)
+[![release](https://img.shields.io/github/v/release/NishimiyaFukinoto/astrbot_plugin_excalibur?display_name=tag)](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/releases)
+[![license](https://img.shields.io/github/license/NishimiyaFukinoto/astrbot_plugin_excalibur)](LICENSE)
+[![python](https://img.shields.io/badge/python-3.10%2B-blue)](docs/INSTALL.md)
+[![AstrBot](https://img.shields.io/badge/AstrBot-%E2%89%A54.29.0-blueviolet)](https://github.com/AstrBotDevs/AstrBot)
+
 让 QQ 上的「大肥鱼」远程操控你的 Android 手机。**唯一的大脑是 AstrBot 里的模型，手机上不装第二个模型。**
 
 ```
