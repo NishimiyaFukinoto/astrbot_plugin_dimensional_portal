@@ -226,7 +226,8 @@ V1 只做三件事：看设备状态、增删 QQ 白名单、急停清队列。�
 
 - 开关：插件配置 `admin_token`
   - 留空 → 首次启动自动生成 `secrets.token_urlsafe(24)` 并写回配置，日志打印
-    `[dimensional-portal] 管理控制台：http://<IP>:8765/console?k=<token>`  - 填 `off` → 四个路由**完全不注册**（访问全是 404）
+    `[dimensional-portal] 管理控制台：http://<IP>:8765/console?k=<token>`
+  - 填 `off` → 四个路由**完全不注册**（访问全是 404）
   - 填其它值 → 用它当密钥
 - 鉴权：`X-Admin-Token` 头，或查询串 `?k=`；`hmac.compare_digest` 比较。
   控制台页面错 `k` 回 **403**（不返回页面正文），JSON 接口错 token 回 **401** `{"ok":false,"error":"unauthorized"}`。
