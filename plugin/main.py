@@ -329,6 +329,34 @@ class DimensionalPortalPhoneBridge(Star):
             host = _local_ip()
         return f"http://{host}:{self.server.port}/console?k={self.server.admin_token}"
 
+    @filter.on_llm_request()
+    async def _hide_tools_for_outsiders(self, event: AstrMessageEvent, req: Any) -> None:
+        """不在「QQ号白名单」里的人照样能聊天，只是这次请求里看不到 phone_* 工具。
+
+        次元门的白名单只管「能不能遥控手机」，和 AstrBot 自己的聊天白名单是两件事；
+        这里把工具从本次请求里摘掉，模型就不会去调、也不会把「没有权限」当成回答。
+        """
+        try:
+            uid = str(event.get_sender_id() or "")
+            allowed, _why = self.policy.user_allowed(uid)
+            if allowed:
+                return
+            tool_set = getattr(req, "func_tool", None)
+            tools = getattr(tool_set, "tools", None)
+            if isinstance(tools, list):
+                kept = [
+                    t
+                    for t in tools
+                    if not str(getattr(t, "name", "")).startswith("phone_")
+                ]
+                if len(kept) != len(tools):
+                    tool_set.tools = kept
+                    logger.debug(
+                        "[dimensional-portal] 用户 %s 不在白名单，本次请求已屏蔽手机工具", uid
+                    )
+        except Exception as exc:  # 钩子出问题也不能影响正常聊天
+            logger.warning("[dimensional-portal] 屏蔽手机工具失败：%s", exc)
+
     def _gate(self, event: AstrMessageEvent, action: str) -> str | None:
         """白名单 + 限流 + 在线检查。返回非 None 就是拒绝理由。"""
         uid = str(event.get_sender_id() or "")

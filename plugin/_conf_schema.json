@@ -23,7 +23,7 @@
   "allowed_user_ids": {
     "type": "string",
     "description": "QQ号白名单",
-    "hint": "逗号分隔；留空表示不限制，仅建议调试时使用。",
+    "hint": "逗号分隔；只管「能不能遥控手机」，不影响在 AstrBot 里正常聊天（那是 AstrBot 自己的白名单）。留空表示不限制，仅建议调试时使用。",
     "default": "",
     "obvious_hint": true
   },
@@ -36,7 +36,7 @@
   "admin_token": {
     "type": "string",
     "description": "管理控制台密钥",
-    "hint": "留空则首次启动自动生成并打到日志；填 off 彻底关闭控制台。<br><a href=\"http://127.0.0.1:8765/console\" target=\"_blank\" rel=\"noopener\">打开控制台</a>（同一台电脑上点它即可，密钥会自动带上；改过监听端口就把链接里的 8765 换成新端口）",
+    "hint": "留空则首次启动自动生成并打到日志；填 off 彻底关闭控制台。控制台地址：http://127.0.0.1:8765/console （在本机浏览器打开会自动带上密钥；从别的设备访问要在后面补 ?k=上面这个密钥；改过监听端口就把 8765 换成新端口）",
     "default": "",
     "obvious_hint": true
   },

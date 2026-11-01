@@ -353,6 +353,36 @@ async def main() -> int:
             check("非白名单用户被拒", "没有权限" in denied, denied)
             check("被拒不发送任何消息", not stranger.sent, str(stranger.sent))
 
+            # 白名单只管「能不能遥控手机」：非白名单用户这次请求里看不到 phone_* 工具，但照常能聊天
+            class _Tool:
+                def __init__(self, name: str) -> None:
+                    self.name = name
+
+            class _ToolSet:
+                def __init__(self) -> None:
+                    self.tools = [_Tool("phone_tap"), _Tool("phone_see"), _Tool("web_search")]
+
+            class _Req:
+                def __init__(self) -> None:
+                    self.func_tool = _ToolSet()
+
+            req = _Req()
+            await module.DimensionalPortalPhoneBridge._hide_tools_for_outsiders(
+                plugin, stranger, req
+            )
+            names = [t.name for t in req.func_tool.tools]
+            check("非白名单用户被摘掉手机工具", names == ["web_search"], str(names))
+
+            owner_req = _Req()
+            await module.DimensionalPortalPhoneBridge._hide_tools_for_outsiders(
+                plugin, ev, owner_req
+            )
+            check(
+                "白名单用户保留手机工具",
+                len(owner_req.func_tool.tools) == 3,
+                str([t.name for t in owner_req.func_tool.tools]),
+            )
+
             print("\n[6] 敏感界面不截图")
             FAKE_STATE["cur_pkg"] = "com.tencent.mm"  # 让下一次心跳上报微信在前台
             await asyncio.sleep(0.6)
