@@ -455,6 +455,72 @@
     }
   }
 
+  /* ---------- V2：安全策略 ---------- */
+  .toggle-row { margin: 16px 0 4px; }
+  .switch { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+  .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  .track {
+    position: relative; flex: 0 0 auto; width: 46px; height: 26px; border-radius: 999px;
+    background: rgba(123, 94, 167, 0.22); box-shadow: inset 0 1px 3px rgba(60, 40, 90, 0.18);
+    transition: background 0.28s ease;
+  }
+  .knob {
+    position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
+    background: #fff; box-shadow: 0 2px 6px rgba(70, 40, 100, 0.3);
+    transition: transform 0.28s cubic-bezier(0.4, 0.9, 0.3, 1.2);
+  }
+  .switch input:checked + .track { background: linear-gradient(135deg, var(--rose), var(--lavender)); }
+  .switch input:checked + .track .knob { transform: translateX(20px); }
+  .switch input:focus-visible + .track { outline: 2px solid rgba(232, 86, 143, 0.55); outline-offset: 3px; }
+  .switch-label { font-weight: 600; color: var(--text); transition: color 0.2s ease; }
+  .switch input:checked ~ .switch-label { color: var(--rose-deep); }
+  .note.tight { margin-top: 5px; padding-left: 58px; font-size: 12.5px; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 18px 0 4px; }
+  @media (max-width: 470px) { .grid { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); }
+  .field input {
+    width: 100%; padding: 10px 12px; border-radius: 13px; border: 1px solid var(--line-strong);
+    background: rgba(255, 255, 255, 0.92); font-family: var(--mono); font-size: 14px;
+    color: var(--text); transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .field input:focus {
+    outline: none; border-color: rgba(232, 86, 143, 0.55);
+    box-shadow: 0 0 0 3px rgba(232, 86, 143, 0.14);
+  }
+  .btn.ghost {
+    color: var(--violet); background: rgba(255, 255, 255, 0.9);
+    border-color: var(--line-strong);
+  }
+  .btn.ghost:hover { background: #fff; }
+
+  /* ---------- V2：审计 ---------- */
+  .audit {
+    display: flex; flex-direction: column; gap: 8px; margin: 8px 0 14px;
+    max-height: clamp(280px, 56vh, 620px); overflow-y: auto;
+    scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+  }
+  .audit-item {
+    display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 4px 12px; align-items: baseline;
+    padding: 10px 13px; border-radius: 13px; background: rgba(255, 255, 255, 0.62);
+    border: 1px solid var(--line); font-size: 13px;
+  }
+  .audit-head { display: flex; align-items: center; gap: 8px; }
+  .audit-time { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  .audit-kind {
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em; padding: 2px 8px;
+    border-radius: 999px; text-align: center; white-space: nowrap;
+  }
+  @media (max-width: 560px) {
+    .audit-item { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  }
+  .k-task { background: rgba(96, 176, 220, 0.2); color: #245f83; }
+  .k-admin { background: rgba(150, 120, 220, 0.22); color: #5a3d8c; }
+  .k-deny { background: rgba(232, 86, 143, 0.18); color: #a3235a; }
+  .k-stop { background: rgba(240, 160, 60, 0.22); color: #86560f; }
+  .audit-detail { color: var(--text-soft); word-break: break-all; line-height: 1.5; }
+  .audit-empty { color: var(--muted); font-size: 13px; padding: 12px 2px; }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.001ms !important;
@@ -519,6 +585,47 @@
   </section>
 
   <section class="card">
+    <h2>安全策略</h2>
+    <div class="toggle-row">
+      <label class="switch">
+        <input type="checkbox" id="sw-shot">
+        <span class="track"><span class="knob"></span></span>
+        <span class="switch-label">敏感界面允许截图</span>
+      </label>
+      <div class="note tight">开着时微信 / 支付宝 / 银行 / 设置的画面也会截图并推到 QQ，等于把这些画面发上了腾讯的服务器。</div>
+    </div>
+    <div class="toggle-row">
+      <label class="switch">
+        <input type="checkbox" id="sw-write">
+        <span class="track"><span class="knob"></span></span>
+        <span class="switch-label">敏感界面允许点击输入</span>
+      </label>
+      <div class="note tight">关着时敏感界面只能看（phone_see / phone_ui），不点、不输入。</div>
+    </div>
+    <div class="grid">
+      <label class="field"><span>每分钟操作上限</span><input type="number" id="num-rate" min="1" max="600" step="1"></label>
+      <label class="field"><span>任务超时（毫秒）</span><input type="number" id="num-timeout" min="1000" max="120000" step="500"></label>
+      <label class="field"><span>离线判定（秒）</span><input type="number" id="num-offline" min="5" max="600" step="5"></label>
+      <label class="field"><span>截图质量（1–95）</span><input type="number" id="num-quality" min="1" max="95" step="1"></label>
+      <label class="field"><span>单图上限（KB）</span><input type="number" id="num-kb" min="100" max="20000" step="100"></label>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn primary" id="save-policy" type="button">保存策略</button>
+      <button class="btn ghost" id="reset-policy" type="button">还原本页</button>
+    </div>
+    <div class="note" id="policy-note">改完立刻生效：不用重载插件，也不会断开手机。</div>
+  </section>
+
+  <section class="card">
+    <h2>操作审计</h2>
+    <div class="audit" id="audit-list"><div class="audit-empty">读取中…</div></div>
+    <div class="row">
+      <button class="btn ghost" id="audit-more" type="button">加载更多</button>
+      <span class="note" id="audit-count" style="margin:0;flex:1 1 auto"></span>
+    </div>
+  </section>
+
+  <section class="card">
     <h2>急停</h2>
     <button class="btn danger" id="stop-btn" type="button">清空所有排队任务</button>
     <div class="note" id="stop-note">只清空还没下发的任务；已经在手机上执行的动作无法撤回。</div>
@@ -539,6 +646,20 @@
   var timerStopped = false;
   var lastIds = [];
   var busy = false;
+  var lastCfg = null;
+  var policyDirty = false;
+  var auditOffset = 0;
+  var auditLoaded = false;
+  var KIND_LABEL = {
+    task: '任务',
+    admin: '改配置',
+    deny_user: '拦白名单',
+    deny_rate: '拦限流',
+    deny_screenshot: '拦截图',
+    deny_sensitive_write: '拦写操作',
+    deny_blacklist: '拦黑名单',
+    emergency_stop: '急停'
+  };
 
   try {
     K = new URLSearchParams(window.location.search).get('k') || '';
@@ -670,6 +791,159 @@
     });
   }
 
+  // ---------------------------------------------------------------- 安全策略
+
+  var POLICY_INTS = ['num-rate', 'num-timeout', 'num-offline', 'num-quality', 'num-kb'];
+  var POLICY_KEYS = {
+    'num-rate': 'rate_limit_per_minute',
+    'num-timeout': 'task_timeout_ms',
+    'num-offline': 'offline_after_seconds',
+    'num-quality': 'screenshot_quality',
+    'num-kb': 'max_screenshot_kb'
+  };
+
+  function renderSecurity(cfg) {
+    lastCfg = cfg;
+    if (policyDirty) { return; }
+    if ($('sw-shot')) { $('sw-shot').checked = cfg.allow_screenshot_sensitive === true; }
+    if ($('sw-write')) { $('sw-write').checked = cfg.allow_sensitive_write === true; }
+    POLICY_INTS.forEach(function (id) {
+      var el = $(id);
+      var key = POLICY_KEYS[id];
+      if (el && document.activeElement !== el && cfg[key] !== undefined) {
+        el.value = String(cfg[key]);
+      }
+    });
+  }
+
+  function markDirty() {
+    policyDirty = true;
+    note('policy-note', '有未保存的改动，点「保存策略」后生效。', 'warn');
+  }
+
+  function collectPolicy() {
+    var body = {
+      allow_screenshot_sensitive: !!$('sw-shot').checked,
+      allow_sensitive_write: !!$('sw-write').checked
+    };
+    POLICY_INTS.forEach(function (id) {
+      var raw = ($(id).value || '').trim();
+      if (raw !== '') { body[POLICY_KEYS[id]] = Number(raw); }
+    });
+    return body;
+  }
+
+  function savePolicy() {
+    var btn = $('save-policy');
+    btn.disabled = true;
+    note('policy-note', '正在保存…');
+    return api('/admin/config', { method: 'POST', body: JSON.stringify(collectPolicy()) })
+      .then(function (data) {
+        policyDirty = false;
+        renderSecurity(data.applied || {});
+        note('policy-note', '已保存并生效。', 'ok');
+        hideBanner();
+      })
+      .catch(function (err) {
+        note('policy-note', err.message || '保存失败', 'bad');
+        if (err.status === 401 || err.status === 403) {
+          stopPolling('密钥无效或已过期，请用日志里的新地址重新打开。');
+        }
+      })
+      .then(function () {
+        btn.disabled = false;
+      });
+  }
+
+  // ---------------------------------------------------------------- 审计
+
+  function fmtKind(kind) {
+    return KIND_LABEL[kind] || kind || '未知';
+  }
+
+  function kindClass(kind) {
+    if (kind === 'task') { return 'k-task'; }
+    if (kind === 'admin') { return 'k-admin'; }
+    if (kind === 'emergency_stop') { return 'k-stop'; }
+    return 'k-deny';
+  }
+
+  function fmtTime(ts) {
+    var d = new Date((Number(ts) || 0) * 1000);
+    if (isNaN(d.getTime())) { return '--:--'; }
+    var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+    return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  }
+
+  function fmtDetail(item) {
+    var parts = [];
+    if (item.action) { parts.push('动作 ' + item.action); }
+    if (item.target) { parts.push('目标 ' + item.target); }
+    if (item.pkg) { parts.push('包名 ' + item.pkg); }
+    if (item.user) { parts.push('用户 ' + item.user); }
+    if (item.change) { parts.push('改动 ' + JSON.stringify(item.change)); }
+    if (item.params && Object.keys(item.params).length) { parts.push('参数 ' + JSON.stringify(item.params)); }
+    if (item.dropped !== undefined) { parts.push('清掉 ' + item.dropped + ' 个'); }
+    if (item.reason) { parts.push(item.reason); }
+    return parts.join(' · ') || '—';
+  }
+
+  function auditRow(item) {
+    var row = document.createElement('div');
+    row.className = 'audit-item';
+    var head = document.createElement('div');
+    head.className = 'audit-head';
+    var time = document.createElement('span');
+    time.className = 'audit-time';
+    time.textContent = fmtTime(item.ts);
+    var kind = document.createElement('span');
+    kind.className = 'audit-kind ' + kindClass(item.kind);
+    kind.textContent = fmtKind(item.kind);
+    head.appendChild(time);
+    head.appendChild(kind);
+    var detail = document.createElement('span');
+    detail.className = 'audit-detail';
+    detail.textContent = fmtDetail(item);
+    row.appendChild(head);
+    row.appendChild(detail);
+    return row;
+  }
+
+  function renderAudit(items, total, append) {
+    var box = $('audit-list');
+    if (!append) {
+      box.innerHTML = '';
+      if (!items.length) {
+        var empty = document.createElement('div');
+        empty.className = 'audit-empty';
+        empty.textContent = '还没有记录。让次元门动一下手机，这里就会出现。';
+        box.appendChild(empty);
+      }
+    }
+    var frag = document.createDocumentFragment();
+    items.forEach(function (item) { frag.appendChild(auditRow(item)); });
+    box.appendChild(frag);
+    setText('audit-count', '共 ' + (total || 0) + ' 条，已显示 ' + auditOffset + ' 条');
+    var more = $('audit-more');
+    if (more) { more.disabled = auditOffset >= (total || 0); }
+  }
+
+  function loadAudit(append) {
+    var limit = 50;
+    if (!append) { auditOffset = 0; }
+    return api('/admin/audit?limit=' + limit + '&offset=' + auditOffset)
+      .then(function (data) {
+        var items = data.items || [];
+        auditOffset += items.length;
+        renderAudit(items, data.total, append);
+      })
+      .catch(function (err) {
+        if (err.status === 401 || err.status === 403) {
+          stopPolling('密钥无效或已过期，请用日志里的新地址重新打开。');
+        }
+      });
+  }
+
   function applyIds(ids, okText) {
     if (busy) { return Promise.resolve(); }
     busy = true;
@@ -726,6 +1000,8 @@
       var ids = (cfg.allowed_user_ids || []).map(String);
       // 列表没变就别重绘，否则每 5 秒都会重播一次入场动画
       if (ids.join(',') !== lastIds.join(',')) { renderChips(ids); }
+      renderSecurity(cfg);
+      if (!auditLoaded) { auditLoaded = true; loadAudit(false); }
     }).catch(function (err) {
       if (err.status === 401 || err.status === 403) {
         stopPolling('密钥无效：请用日志里的 /console?k=… 地址重新打开。');
@@ -756,6 +1032,19 @@
     if (ev.key === 'Enter') { ev.preventDefault(); addId(); }
   });
   $('stop-btn').addEventListener('click', stopAll);
+  $('save-policy').addEventListener('click', savePolicy);
+  $('reset-policy').addEventListener('click', function () {
+    policyDirty = false;
+    if (lastCfg) { renderSecurity(lastCfg); }
+    note('policy-note', '已还原成当前生效的值（未保存的改动已丢弃）。');
+  });
+  POLICY_INTS.forEach(function (id) {
+    $(id).addEventListener('input', markDirty);
+  });
+  ['sw-shot', 'sw-write'].forEach(function (id) {
+    $(id).addEventListener('change', markDirty);
+  });
+  $('audit-more').addEventListener('click', function () { loadAudit(true); });
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) { loadState(); }
   });

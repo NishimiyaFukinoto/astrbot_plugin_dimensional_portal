@@ -32,7 +32,9 @@ try:
 except Exception:  # 脱离 AstrBot 单独跑测试（tests/ 里的脚本）
     log = logging.getLogger("astrbot.phone_bridge")
 
-MAX_POLL_WAIT_S = 30.0
+MAX_POLL_WAIT_S = 30
+AUDIT_PAGE_DEFAULT = 50
+AUDIT_PAGE_MAX = 200
 DEFAULT_MAX_BODY = 16 * 1024 * 1024  # 截图 base64 走这条通道，留足余量
 
 # 管理控制台：同一 IP 每分钟最多失败 10 次，超了锁 60 秒（内存计数，重启即清）
@@ -110,6 +112,7 @@ class PhoneBridgeServer:
         self.app.router.add_get("/console-assets/{name}", self.handle_console_asset)
         self.app.router.add_get("/admin/state", self.handle_admin_state)
         self.app.router.add_post("/admin/config", self.handle_admin_config)
+        self.app.router.add_get("/admin/audit", self.handle_admin_audit)
         self.app.router.add_post("/admin/stop", self.handle_admin_stop)
         self._admin_routes_added = True
         log.info("[dimensional-portal] 管理控制台已启用（/console）")
@@ -418,6 +421,7 @@ class PhoneBridgeServer:
                 "online": self.hub.online,
                 "device": self.hub.device,
                 "config": snap.get("config") or {},
+                "editable": snap.get("editable") or {},
                 "audit": snap.get("audit") or [],
                 "queue": self.hub.queue_size,
                 "uptime_s": round(time.monotonic() - self.started_at, 1) if self.started_at else 0.0,
@@ -438,8 +442,30 @@ class PhoneBridgeServer:
             applied = self.console.apply_config(payload, ip=self._client_ip(request))
         except ValueError as exc:
             return web.json_response({"ok": False, "error": str(exc)}, status=400)
-        log.info("[dimensional-portal] 控制台改了白名单：%s", applied.get("allowed_user_ids"))
+        if "allowed_user_ids" in payload:
+            log.info("[dimensional-portal] 控制台改了白名单：%s", applied.get("allowed_user_ids"))
+        changed = [k for k in payload if k != "allowed_user_ids" and k in applied]
+        if changed:
+            log.info("[dimensional-portal] 控制台改了安全策略：%s", ", ".join(changed))
         return web.json_response({"ok": True, "applied": applied})
+
+    async def handle_admin_audit(self, request: web.Request) -> web.StreamResponse:
+        guard = self._admin_guard(request)
+        if guard is not None:
+            return guard
+        # 查询串都是字符串，先转成 int 并夹紧范围，免得下游实现拿到 "50" 去切片
+        try:
+            limit = int(request.query.get("limit", "50"))
+        except (TypeError, ValueError):
+            limit = AUDIT_PAGE_DEFAULT
+        try:
+            offset = int(request.query.get("offset", "0"))
+        except (TypeError, ValueError):
+            offset = 0
+        limit = max(1, min(limit, AUDIT_PAGE_MAX))
+        offset = max(0, offset)
+        page = self.console.audit_page(limit=limit, offset=offset)
+        return web.json_response({"ok": True, **page})
 
     async def handle_admin_stop(self, request: web.Request) -> web.StreamResponse:
         guard = self._admin_guard(request)

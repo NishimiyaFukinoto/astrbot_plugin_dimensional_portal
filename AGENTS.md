@@ -1,7 +1,7 @@
 # AGENTS.md —— 项目交接说明（给下一个会话 / 给未来的自己）
 
 > 目的：\*\*新开一个会话说「读 AGENTS.md 继续」，就能立刻接上\*\*，不用重新考古。
-> 最后更新：2026-11-01　当前版本：\*\*0.3.0\*\*（M0 + M1 已完成，M2 提前完成，M3 起暂停）
+> 最后更新：2026-11-01　当前版本：\*\*0.4.0\*\*（M0 + M1 已完成，M2 提前完成，控制台 V2 已完成，M3 起暂停）
 
 \---
 
@@ -36,7 +36,7 @@ QQ ←→ 腾讯 ←→ NapCat ←→ AstrBot ←→ 本插件 (aiohttp :8765) �
 |`tests/smoke\_test.py`|协议层冒烟，**35 项**，不需要 AstrBot、不需要真机|
 |`tests/live\_server.py`|真插件类 + 真 aiohttp + 假手机，直接调工具函数，**48 项**（必须用实例 venv python）|
 |`tests/import\_check.py`|在真 AstrBot 环境验证 **11 个工具**全部注册（docstring→JSON Schema）|
-|`tests/admin\_console\_test.py`|控制台端到端，**41 项**（真插件类 + 假手机 + 4 个端口，必须实例 venv）|
+|`tests/admin\_console\_test.py`|控制台端到端，**58 项**（真插件类 + 假手机 + 4 个端口，必须实例 venv）|
 |`tools/make\_release\_zip.py`|打「WebUI 导入压缩包」能直接装的 zip（支持 `--help` / `--out-dir`）|
 |`tools/make\_phone\_script.py`|用 `DIMENSIONAL\_PORTAL\_BASES` / `DIMENSIONAL\_PORTAL\_TOKEN` 环境变量把模板生成为带真实地址的 `phone/dimensional\_portal\_agent.local.js`（.gitignore 已忽略），推手机用这个|
 |`tools/check\_es5.py`|手机端脚本 ES5 守卫：扫 `phone/\*.js` 里禁止的 ES6 语法（CI 也跑）|
@@ -46,19 +46,19 @@ QQ ←→ 腾讯 ←→ NapCat ←→ AstrBot ←→ 本插件 (aiohttp :8765) �
 |`docs/INSTALL.md`|安装、权限、排错|
 |`docs/PLAN.md`|里程碑、决策记录、风险、调试手册|
 |`docs/STATUS.md`|进度大纲（已完成 / 待办 P0–P6）|
-|`docs/CONSOLE\_PLAN.md`|管理控制台的执行方案（V1 已实现，V2 方向仍以此为准）|
+|`docs/CONSOLE\_PLAN.md`|管理控制台的执行方案与实现记录（V1 / V1.2 视觉 / V2 功能均已实现）|
 
 ## 3\. 当前状态（2026-11-01）
 
 * 仓库：`https://github.com/NishimiyaFukinoto/astrbot\_plugin\_dimensional\_portal`（public，main）
 * CI：`.github/workflows/tests.yml` —— `smoke` 必跑，`astrbot` 集成非阻塞；最近一次 **success**
-* Release：`v0.3.0`（正文 + 附件 `astrbot\_plugin\_dimensional\_portal.zip`，406 KB，含控制台背景图，可被 WebUI「导入压缩包」直接装）
+* Release：`v0.3.0` 已发布（正文 + 附件 `astrbot\_plugin\_dimensional\_portal.zip`，406 KB，可被 WebUI「导入压缩包」直接装）；`v0.4.0`（控制台 V2）代码已就绪，Release 尚未发布
 * 对外呈现：logo、6 徽章、335 行 README、10 个 topics、issue/PR 模板、CHANGELOG
 * 部署：**已部署**到 AstrBot 实例的 `core/data/plugins/astrbot\_plugin\_dimensional\_portal/`
 * 手机：**离线**，而且手机里跑的还是改名前的旧脚本 `dafeiyu\_agent.js`（指向旧地址）；需要重新推 `dimensional\_portal\_agent.js` 并重启
-* 管理控制台：**V1 已实现**（`admin\_token` 自动生成、`/console` 看状态/改白名单/急停，错 k 403、失败 10 次锁 60 秒）；
-安全策略开关与审计列表留 V2，接口走 `\_ConsoleAdapter` 适配器
-* 未做：M3 相机、M4 下载装 APK、M5 保活加固、控制台 V2
+* 管理控制台：**V2 已实现**（`admin\_token` 自动生成、`/console` 看状态/改白名单/开关安全策略/翻审计日志/急停，错 k 403、失败 10 次锁 60 秒；`/admin/audit` 分页，`/admin/state` 带 `editable` 区间）；
+
+* 未做：M3 相机、M4 下载装 APK、M5 保活加固
 
 ## 4\. 五分钟跑起来
 
@@ -69,7 +69,7 @@ cd dimensional-portal-phone-bridge
 python tests/smoke\_test.py          # 35/35
 "$ASTRBOT\_INSTANCE/venv/Scripts/python.exe" tests/live\_server.py   # 48/48（必须实例 venv）
 python tests/import\_check.py        # 11 个工具（需要能 import astrbot）
-"$ASTRBOT\_INSTANCE/venv/Scripts/python.exe" tests/admin\_console\_test.py   # 41/41（必须实例 venv）
+"$ASTRBOT\_INSTANCE/venv/Scripts/python.exe" tests/admin\_console\_test.py   # 58/58（必须实例 venv）
 
 # 手机端脚本约束检查（ES5）
 node --check phone/dimensional\_portal\_agent.js
@@ -158,7 +158,7 @@ python tools/dbg.py '{"action":"open\_app","params":{"package":"com.tencent.mm"}
 * **P2**：M3 相机（`camera\_photo` / `camera\_video`）
 * **P3**：M4 下载安装 APK（`download\_apk` / `install\_apk`）
 * **P4**：M5 保活（前台服务、开机自启、断线告警）
-* **P5**：README「界面展示」区还空着（需要一张真机截图）
+* **P5**：README「界面展示」目前用脱敏演示图（`assets/console-demo.png`），有机会换成真机截图
 
 ## 9\. 环境事实（本机）
 

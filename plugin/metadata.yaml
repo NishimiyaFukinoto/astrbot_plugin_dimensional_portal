@@ -2,7 +2,7 @@ name: astrbot_plugin_dimensional_portal
 display_name: 次元门
 desc: 让 AstrBot 通过 QQ 远程操控安卓手机：截图看界面、点击滑动、输入文字、打开应用。手机端用 AutoX.js 执行，不需要 root。
 short_desc: QQ 远程操控安卓手机
-version: 0.3.0
+version: 0.4.0
 author: 次元门
 repo: "https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal"
 astrbot_version: ">=4.29.0"

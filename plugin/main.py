@@ -114,27 +114,115 @@ def _split_ids(value: Any) -> list[str]:
     return _as_list(value)
 
 
+_EDITABLE_INTS: dict[str, tuple[int, int, str]] = {
+    "rate_limit_per_minute": (1, 600, "每分钟操作上限"),
+    "task_timeout_ms": (1000, 120000, "任务超时（毫秒）"),
+    "offline_after_seconds": (5, 600, "离线判定（秒）"),
+    "screenshot_quality": (1, 95, "截图质量"),
+    "max_screenshot_kb": (100, 20000, "单图上限（KB）"),
+}
+
+_EDITABLE_BOOLS: dict[str, str] = {
+    "allow_screenshot_sensitive": "敏感界面允许截图",
+    "allow_sensitive_write": "敏感界面允许点击输入",
+}
+
+AUDIT_PAGE_DEFAULT = 50
+AUDIT_PAGE_MAX = 200
+AUDIT_READ_TAIL_BYTES = 512 * 1024
+
+
 class _ConsoleAdapter:
-    """管理控制台需要的最小能力：读快照、改白名单、急停。
+    """管理控制台需要的能力：读快照、改白名单与安全策略、读审计、急停。
 
     隔这一层是为了让 bridge/server.py 完全不碰 AstrBot 的 self.config；
-    以后 V2 加"安全策略开关"时只改这里，HTTP 层不用动。
+    HTTP 层只负责鉴权和 JSON，业务语义都在这里。
     """
 
     def __init__(self, plugin: "DimensionalPortalPhoneBridge") -> None:
         self.plugin = plugin
+        self._audit_cache: tuple[float, int, list[dict[str, Any]]] | None = None
+
+    # ---------------------------------------------------------------- 读
 
     def snapshot(self) -> dict[str, Any]:
+        plugin = self.plugin
         return {
             "config": {
-                "allowed_user_ids": _split_ids(self.plugin.config.get("allowed_user_ids", "")),
-                "rate_limit_per_minute": int(self.plugin.policy.rate_limit),
+                "allowed_user_ids": _split_ids(plugin.config.get("allowed_user_ids", "")),
+                "rate_limit_per_minute": int(plugin.policy.rate_limit),
+                "task_timeout_ms": int(plugin.default_timeout_ms),
+                "offline_after_seconds": int(round(plugin.hub.offline_after)),
+                "screenshot_quality": int(plugin.quality),
+                "max_screenshot_kb": int(round(plugin.max_shot_bytes / 1024)),
+                "allow_screenshot_sensitive": bool(plugin.allow_sensitive_shot),
+                "allow_sensitive_write": bool(plugin.allow_sensitive_write),
+                "sensitive_packages": list(plugin.policy.sensitive_packages),
+                "package_blacklist": list(plugin.policy.package_blacklist),
             },
-            "audit": self._audit_tail(20),
+            "audit": self.audit_page(limit=20)["items"],
+            "editable": {
+                "ints": {key: [lo, hi] for key, (lo, hi, _label) in _EDITABLE_INTS.items()},
+                "bools": sorted(_EDITABLE_BOOLS),
+            },
         }
 
+    def audit_page(self, limit: Any = AUDIT_PAGE_DEFAULT, offset: Any = 0) -> dict[str, Any]:
+        try:
+            size = max(1, min(int(limit), AUDIT_PAGE_MAX))
+        except (TypeError, ValueError):
+            size = AUDIT_PAGE_DEFAULT
+        try:
+            skip = max(0, int(offset))
+        except (TypeError, ValueError):
+            skip = 0
+        items = self._audit_all()
+        return {"items": items[skip:skip + size], "total": len(items), "offset": skip}
+
+    def _audit_all(self) -> list[dict[str, Any]]:
+        """读审计日志，新的在前；按 (mtime, size) 缓存，避免每次轮询都重读。"""
+        path = getattr(self.plugin, "audit_path", None)
+        if not path:
+            return []
+        try:
+            stat = Path(path).stat()
+        except OSError:
+            return []
+        cached = self._audit_cache
+        if cached and cached[0] == stat.st_mtime and cached[1] == stat.st_size:
+            return cached[2]
+        try:
+            with open(path, "rb") as fh:
+                fh.seek(0, 2)
+                size = fh.tell()
+                fh.seek(max(0, size - AUDIT_READ_TAIL_BYTES))
+                raw = fh.read()
+        except OSError:
+            return []
+        lines = raw.decode("utf-8", errors="replace").splitlines()
+        if size > AUDIT_READ_TAIL_BYTES and lines:
+            lines = lines[1:]  # 第一行可能是半条
+        out: list[dict[str, Any]] = []
+        for line in reversed(lines):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                item = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(item, dict):
+                out.append(item)
+        self._audit_cache = (stat.st_mtime, stat.st_size, out)
+        return out
+
+    # ---------------------------------------------------------------- 写
+
     def apply_config(self, payload: dict[str, Any], ip: str = "-") -> dict[str, Any]:
-        """只处理 allowed_user_ids，其它字段一律忽略；返回落盘后回读的真实值。"""
+        """白名单 + 安全策略；未知字段忽略，越界直接 ValueError（HTTP 400）。"""
+        plugin = self.plugin
+        change: dict[str, Any] = {}
+
         if "allowed_user_ids" in payload:
             ids = list(dict.fromkeys(_split_ids(payload.get("allowed_user_ids"))))
             if not ids:
@@ -142,40 +230,61 @@ class _ConsoleAdapter:
             bad = [item for item in ids if not item.isdigit()]
             if bad:
                 raise ValueError(f"QQ 号必须是纯数字：{', '.join(bad)}")
-            self.plugin.config["allowed_user_ids"] = ",".join(ids)
-            saver = getattr(self.plugin.config, "save_config", None)
-            if callable(saver):
-                saver()
-            self.plugin._rebuild_policy()
-            server = getattr(self.plugin, "server", None)
+            plugin.config["allowed_user_ids"] = ",".join(ids)
+            change["allowed_user_ids"] = ids
+
+        for key, (lo, hi, label) in _EDITABLE_INTS.items():
+            if key not in payload:
+                continue
+            try:
+                value = int(payload.get(key))
+            except (TypeError, ValueError):
+                raise ValueError(f"{label}必须是整数") from None
+            if not lo <= value <= hi:
+                raise ValueError(f"{label}要在 {lo}–{hi} 之间")
+            plugin.config[key] = value
+            change[key] = value
+
+        for key, label in _EDITABLE_BOOLS.items():
+            if key not in payload:
+                continue
+            value = payload.get(key)
+            if not isinstance(value, bool):
+                raise ValueError(f"{label}只能是 true/false")
+            plugin.config[key] = value
+            change[key] = value
+
+        if not change:
+            return self.snapshot()["config"]
+
+        saver = getattr(plugin.config, "save_config", None)
+        if callable(saver):
+            saver()
+
+        # 让改动立刻生效（不重载插件、不断开手机）
+        if "allowed_user_ids" in change or "rate_limit_per_minute" in change:
+            plugin._rebuild_policy()
+            server = getattr(plugin, "server", None)
             if server is not None:
-                server.policy = self.plugin.policy
-            self.plugin.policy.audit("admin", ip=ip, change={"allowed_user_ids": ids})
-        return {
-            "allowed_user_ids": _split_ids(self.plugin.config.get("allowed_user_ids", "")),
-            "rate_limit_per_minute": int(self.plugin.policy.rate_limit),
-        }
+                server.policy = plugin.policy
+        if "task_timeout_ms" in change:
+            plugin.default_timeout_ms = int(change["task_timeout_ms"])
+        if "offline_after_seconds" in change:
+            plugin.hub.offline_after = float(change["offline_after_seconds"])
+        if "screenshot_quality" in change:
+            plugin.quality = int(change["screenshot_quality"])
+        if "max_screenshot_kb" in change:
+            plugin.max_shot_bytes = int(change["max_screenshot_kb"]) * 1024
+        if "allow_screenshot_sensitive" in change:
+            plugin.allow_sensitive_shot = bool(change["allow_screenshot_sensitive"])
+        if "allow_sensitive_write" in change:
+            plugin.allow_sensitive_write = bool(change["allow_sensitive_write"])
+
+        plugin.policy.audit("admin", ip=ip, change=change)
+        return self.snapshot()["config"]
 
     def stop_all(self) -> int:
         return int(self.plugin.hub.emergency_clear())
-
-    def _audit_tail(self, limit: int) -> list[dict[str, Any]]:
-        path = getattr(self.plugin, "audit_path", None)
-        if not path:
-            return []
-        try:
-            lines = Path(path).read_text(encoding="utf-8").splitlines()
-        except OSError:
-            return []
-        out: list[dict[str, Any]] = []
-        for line in lines[-limit:]:
-            try:
-                item = json.loads(line)
-            except ValueError:
-                continue
-            if isinstance(item, dict):
-                out.append(item)
-        return out
 
 
 class DimensionalPortalPhoneBridge(Star):

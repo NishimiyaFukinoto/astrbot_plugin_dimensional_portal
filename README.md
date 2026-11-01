@@ -53,7 +53,7 @@ QQ  ←→  腾讯  ←→  NapCat  ←→  AstrBot  ←→  本插件 (aiohttp 
 
 ## 界面展示
 
-**管理控制台** —— 浏览器打开就能看手机状态、改 QQ 白名单、急停（不用 QQ 也能管）：
+**管理控制台** —— 浏览器打开就能看手机状态、改 QQ 白名单、开关安全策略、翻审计日志、急停（不用 QQ 也能管）：
 
 <p align="center">
   <img src="assets/console-demo.png" alt="管理控制台" width="760">
@@ -293,7 +293,7 @@ vivo/iQOO 还可能在第一次弹「应用跳转」确认框，点「始终打�
 | [docs/PROTOCOL.md](docs/PROTOCOL.md) | 通信协议：三个端点、动作表、返回结构 |
 | [docs/PLAN.md](docs/PLAN.md) | 里程碑、决策记录、已知风险、调试手册 |
 | [docs/STATUS.md](docs/STATUS.md) | 进度大纲（已完成 / 待办 P0–P6 / 平台边界） |
-| [docs/CONSOLE_PLAN.md](docs/CONSOLE_PLAN.md) | 管理控制台方案（讨论稿，未实现） |
+| [docs/CONSOLE_PLAN.md](docs/CONSOLE_PLAN.md) | 管理控制台方案与实现记录（V1 / V1.2 / V2） |
 | [docs/INCIDENT-2026-11-01-port-conflict.md](docs/INCIDENT-2026-11-01-port-conflict.md) | 事故复盘：NapCat 连不上（Windows 保留端口吃掉 6199） |
 
 ## Roadmap
@@ -305,7 +305,7 @@ vivo/iQOO 还可能在第一次弹「应用跳转」确认框，点「始终打�
 | M3 相机 | 拍照、录像并回传到 QQ | ⏸ 暂停 |
 | M4 装应用 | 下载 APK 并调起安装（需手动确认） | ⏸ 待做 |
 | M5 保活加固 | 前台服务、断线重连、限流与审计完善 | ⏸ 待做 |
-| 管理控制台 | 网页里改白名单与安全开关（见 CONSOLE_PLAN） | 💬 讨论中 |
+| 管理控制台 | 网页里改白名单、开关安全策略、翻审计日志（见 CONSOLE_PLAN） | ✅ 已完成 |
 | 更多平台 | 其他 IM 适配器（未测试） | 💬 待讨论 |
 
 ## 贡献指南

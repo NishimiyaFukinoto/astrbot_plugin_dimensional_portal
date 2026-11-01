@@ -1,10 +1,11 @@
-"""管理控制台 V1 端到端测试。
+"""管理控制台端到端测试（V1 + V2）。
 
 复用 live_server.py 的插件加载器 / 假手机 / 假事件，重点验证：
   - admin_token 鉴权（无 token 401、错 token 401、控制台错 k 403 且不回页面正文）
   - /admin/state 字段齐全、/admin/config 只认白名单且落盘、/admin/stop 清队列
   - 防爆破锁定（同 IP 连续失败 → 429）
   - admin_token 留空自动生成并写盘、填 off 时四个路由全部 404
+  - V2：安全策略开关（越界/类型校验、立刻生效、落盘）、审计分页接口
 
 跑法：
   venv/Scripts/python.exe tests/admin_console_test.py
@@ -15,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import secrets
 import sys
 import tempfile
 from pathlib import Path
@@ -79,7 +81,11 @@ def _cfg(port: int, admin_token: str) -> dict[str, Any]:
 
 async def main() -> int:
     module = live.load_plugin_module()
-    tmp = Path(tempfile.mkdtemp(prefix="dimensional_portal-admin-"))
+    # 不用 tempfile.mkdtemp：它在 Windows 上给目录下 NFTS 权限只留属主，
+    # 某些沙箱环境下子进程反而写不进去；改用带随机后缀的普通目录。
+    base = Path(os.environ.get("DIMENSIONAL_PORTAL_TEST_TMP") or tempfile.gettempdir())
+    tmp = base / f"dimensional_portal-admin-{os.getpid()}-{secrets.token_hex(3)}"
+    tmp.mkdir(parents=True, exist_ok=True)
     os.environ["DIMENSIONAL_PORTAL_AUDIT_PATH"] = str(tmp / "audit.jsonl")
 
     live.HOST = "127.0.0.1"
@@ -148,9 +154,15 @@ async def main() -> int:
             live.check("state 反映在线", state.get("online") is True)
             live.check("device 是手机快照", state["device"].get("device") == "Fake Pixel 9")
             live.check(
-                "config 只暴露两项",
-                set(state["config"].keys()) == {"allowed_user_ids", "rate_limit_per_minute"},
-                str(state["config"]),
+                "config 暴露 V2 全量白名单/策略字段",
+                {"allowed_user_ids", "rate_limit_per_minute", "allow_screenshot_sensitive",
+                 "allow_sensitive_write", "screenshot_quality"} <= set(state["config"].keys()),
+                str(sorted(state["config"].keys())),
+            )
+            live.check(
+                "config 不泄露密钥",
+                "token" not in state["config"] and "admin_token" not in state["config"],
+                str(sorted(state["config"].keys())),
             )
             live.check("白名单是数组", state["config"]["allowed_user_ids"] == [OWNER])
             live.check("audit 是列表", isinstance(state["audit"], list))
@@ -166,10 +178,8 @@ async def main() -> int:
             live.check("policy 已生效", plugin.policy.user_allowed("10002")[0] is True)
             saved = json.loads(cfg_path.read_text(encoding="utf-8"))
             live.check("配置已落盘", saved.get("allowed_user_ids") == "10001,10002")
-            live.check(
-                "其它字段被忽略",
-                saved.get("token") == LIVE_TOKEN and applied.get("rate_limit_per_minute") == 100,
-            )
+            live.check("token 等非白名单字段不被覆盖", saved.get("token") == LIVE_TOKEN)
+            live.check("同一个请求里的限流值也生效（V2）", applied.get("rate_limit_per_minute") == 5)
 
             status, body = await _post(
                 session, f"{base}/admin/config?k={ADMIN}", {"allowed_user_ids": ["10001"]}
@@ -204,6 +214,101 @@ async def main() -> int:
             audit_lines = Path(os.environ["DIMENSIONAL_PORTAL_AUDIT_PATH"]).read_text(encoding="utf-8").splitlines()
             kinds = [json.loads(line).get("kind") for line in audit_lines if line.strip()]
             live.check("配置改动写了审计", "admin" in kinds, str(kinds))
+
+            print("\n[3b] 安全策略开关 + 审计接口（V2）")
+            status, body = await _get(session, f"{base}/admin/audit?k={ADMIN}&limit=5")
+            page = json.loads(body)
+            live.check("审计接口 200", status == 200 and page.get("ok") is True, f"status={status}")
+            live.check(
+                "审计分页字段齐全",
+                isinstance(page.get("items"), list) and isinstance(page.get("total"), int),
+                body[:120],
+            )
+            live.check(
+                "审计新的在前",
+                bool(page["items"]) and page["items"][0].get("kind") == "admin",
+                str([it.get("kind") for it in page["items"][:3]]),
+            )
+            status, body = await _get(session, f"{base}/admin/audit?k={ADMIN}&limit=2&offset=1")
+            paged = json.loads(body)
+            live.check(
+                "审计 offset 生效",
+                status == 200 and paged.get("offset") == 1 and len(paged["items"]) <= 2,
+                body[:120],
+            )
+            status, _ = await _get(session, f"{base}/admin/audit")
+            live.check("审计接口要密钥", status == 401, f"status={status}")
+            status, body = await _get(session, f"{base}/admin/state?k={ADMIN}")
+            state_cfg = (json.loads(body) or {}).get("config") or {}
+            live.check(
+                "state 带齐 V2 配置项",
+                state_cfg.get("allow_sensitive_write") is False
+                and state_cfg.get("screenshot_quality") == 55
+                and "editable" in json.loads(body),
+                str(sorted(state_cfg)[:6]),
+            )
+
+            status, body = await _post(
+                session,
+                f"{base}/admin/config?k={ADMIN}",
+                {
+                    "allow_screenshot_sensitive": True,
+                    "allow_sensitive_write": True,
+                    "rate_limit_per_minute": 7,
+                    "task_timeout_ms": 15000,
+                    "offline_after_seconds": 25,
+                    "screenshot_quality": 70,
+                    "max_screenshot_kb": 900,
+                },
+            )
+            applied = (json.loads(body) or {}).get("applied") or {}
+            live.check(
+                "安全策略保存成功",
+                status == 200
+                and applied.get("allow_screenshot_sensitive") is True
+                and applied.get("rate_limit_per_minute") == 7,
+                f"status={status} {body[:120]}",
+            )
+            live.check(
+                "开关立刻生效（插件内存）",
+                plugin.allow_sensitive_shot is True and plugin.allow_sensitive_write is True,
+            )
+            live.check("限流立刻生效", plugin.policy.rate_limit == 7)
+            live.check("服务端 policy 也换新", plugin.server.policy.rate_limit == 7)
+            live.check(
+                "超时 / 离线 / 画质 / 单图上限都生效",
+                plugin.default_timeout_ms == 15000
+                and int(plugin.hub.offline_after) == 25
+                and plugin.quality == 70
+                and plugin.max_shot_bytes == 900 * 1024,
+                f"{plugin.default_timeout_ms} {plugin.hub.offline_after} {plugin.quality} {plugin.max_shot_bytes}",
+            )
+            saved = json.loads(cfg_path.read_text(encoding="utf-8"))
+            live.check(
+                "策略已落盘",
+                saved.get("allow_screenshot_sensitive") is True and saved.get("screenshot_quality") == 70,
+                str(saved.get("screenshot_quality")),
+            )
+            audit_lines = Path(os.environ["DIMENSIONAL_PORTAL_AUDIT_PATH"]).read_text(encoding="utf-8").splitlines()
+            last_admin = [json.loads(x) for x in audit_lines if x.strip() and json.loads(x).get("kind") == "admin"][-1]
+            live.check(
+                "策略改动写了审计（带 change）",
+                isinstance(last_admin.get("change"), dict) and "rate_limit_per_minute" in last_admin["change"],
+                str(last_admin.get("change"))[:120],
+            )
+
+            status, body = await _post(session, f"{base}/admin/config?k={ADMIN}", {"rate_limit_per_minute": 9999})
+            live.check(
+                "越界被拒",
+                status == 400 and "之间" in (json.loads(body).get("error") or ""),
+                f"status={status} {body}",
+            )
+            status, body = await _post(session, f"{base}/admin/config?k={ADMIN}", {"allow_sensitive_write": "yes"})
+            live.check(
+                "非布尔被拒",
+                status == 400 and "true/false" in (json.loads(body).get("error") or ""),
+                f"status={status} {body}",
+            )
 
             print("\n[4] 防爆破锁定")
             statuses = []

@@ -1,6 +1,6 @@
 # 管理控制台 · 执行方案
 
-> 状态：**V1 已上线；V1.2 视觉重做（明色·樱空）已完成**；V2 功能（安全策略开关、审计列表）待做。
+> 状态：**V1 已上线；V1.2 视觉重做（明色·樱空）已完成；V2（安全策略开关 + 审计列表）已完成**。
 
 ## 实现现状
 
@@ -11,8 +11,8 @@
 | 设备状态卡 / QQ 白名单增删 / 急停 | ✅ 已上线 |
 | 视觉 V1.2：**明色·樱空**（真实照片背景 + 白色玻璃卡） | ✅ 已上线 |
 | `GET /console-assets/<name>` 背景图（白名单两个文件名） | ✅ 已上线 |
-| 安全策略开关（敏感截图、写操作、限流、超时） | ⬜ V2，需要扩 `/admin/config` |
-| 审计日志列表 | ⬜ V2，`/admin/state` 已带 `audit` 尾巴 |
+| 安全策略开关（敏感截图、写操作、限流、超时） | ✅ V2 已上线（`/admin/config` 扩到 7 个字段） |
+| 审计日志列表（分页加载） | ✅ V2 已上线（`GET /admin/audit?limit&offset`） |
 
 ### V1.2 视觉要点（`plugin/bridge/console.html` + `plugin/bridge/assets/`）
 
@@ -31,6 +31,22 @@
 原来连图片都被挡住。V1.2 加了 `img-src 'self'`，并新增 `GET /console-assets/{name}`：
 只认 `CONSOLE_ASSETS = ("bg-wide.jpg", "bg-tall.jpg")` 这两个文件名（`web.FileResponse` + `Cache-Control: public, max-age=86400`），
 其它名字一律 404，路径穿越拿不到源码。这两个图不带 token 也能取——它们只是装饰，不含任何设备信息。
+
+### V2 要点（2026-11-01 上线）
+
+- **安全策略卡**：两个开关（敏感界面允许截图 `allow_screenshot_sensitive`、敏感界面允许点击输入
+  `allow_sensitive_write`）+ 五个数字（每分钟操作上限、任务超时、离线判定、截图质量、单图上限）。
+  每个字段的合法区间由后端 `_EDITABLE_INTS` 下发到前端（`editable.ints`），前端不再硬编码。
+- **改完立刻生效**：`apply_config()` 存盘一次后就地改内存——白名单/限流触发 `_rebuild_policy()`
+  并替换 `server.policy`；`hub.offline_after`、`default_timeout_ms`、截图质量与上限、两个开关同步更新，
+  不需要重载插件。
+- **审计接口**：`GET /admin/audit?limit=50&offset=0` 返回 `{items, total, offset}`，**新的在前**；
+  后端只读 `audit.jsonl` 末尾 512 KB 并按 `(mtime, size)` 缓存，5 秒轮询不会反复读整份日志。
+  查询串里的 `limit/offset` 在服务端转成 int 并夹紧（1–200 / ≥0），免得下游实现拿到字符串。
+- **轮询不打断输入**：`policyDirty` 或输入框聚焦时，5 秒一次的轮询不会把用户正在改的值冲掉；
+  保存成功后才用服务端回读的值回填。
+- **审计条目排版**：`头部（时间 + 类型徽章）+ 正文`，桌面 `168px / 1fr` 两列，≤560px 自动单列；
+  容器 `max-height: clamp(280px, 56vh, 620px)` 内部滚动，底部「加载更多」分批取。
 
 ## 0. 目标
 
