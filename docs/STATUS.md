@@ -16,7 +16,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
    腾讯 → NapCat（反向 WS，端口 6199）
      │
      ▼
-   AstrBot v4.29.3 ── 插件 astrbot_plugin_excalibur
+   AstrBot v4.29.4 ── 插件 astrbot_plugin_excalibur
      │                     ├─ 注册 11 个 LLM 工具 phone_*
      │                     └─ aiohttp 服务 :8765  ◄──── 长轮询（手机主动来要任务）
      │                                  │
@@ -201,14 +201,14 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 - 插件服务：`GET http://127.0.0.1:8765/healthz` → `{"ok":true,"online":true,"queue":0,"uptime_s":5665}`
 - 手机在线已 1.5 小时：`vivo V2171A / Android 15 / 1080×2400 / 电量 73 / 无障碍 ✓ 截屏 ✓ 悬浮窗 ✓`
 - 手机此刻**息屏**（`screen_on:false`，前台 `com.android.systemui`）——息屏时截图会全黑，需要先亮屏解锁。
-- AstrBot 进程 PID 36388 同时监听 `8765`（插件）、`127.0.0.1:6199`（NapCat 反向 WS）、以及启动器随机分配的面板端口。
+- AstrBot 进程同时监听 `8765`（插件）、`127.0.0.1:16100`（NapCat 反向 WS）、以及启动器随机分配的面板端口。
 - 插件配置：`allowed_user_ids = "123456789,987654321"`、`debug_token = ""`（`/debug/submit` 已关闭）。
 - 审计日志已 117 行。
 
 ## 7. 环境依赖
 
 ### 电脑端（已完成）
-- AstrBot v4.29.3 + NapCat（启动器管理：面板端口随机、6199 给 NapCat）
+- AstrBot v4.29.4 + NapCat（启动器管理：面板端口随机、NapCat 反向 WS 用 16100）
 - 插件已部署：`<实例>/core/data/plugins/astrbot_plugin_excalibur`
 - Tailscale 已登录（电脑 `100.x.x.1`）；防火墙当前全关，无需放行
 

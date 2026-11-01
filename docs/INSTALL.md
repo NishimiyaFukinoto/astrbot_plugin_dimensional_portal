@@ -64,7 +64,7 @@ var TOKEN = "<你的手机端 token>";         // 必须和插件配置里的 to
 
 拷完在 WebUI → 插件管理 → 重载插件，或者重启 AstrBot。
 （WebUI 端口由启动器分配，每次启动可能不一样，以启动器窗口里显示的地址为准；
-找现在监听哪个端口：`netstat -ano | findstr LISTENING`，同进程还会占 8765 和 6199。）
+找现在监听哪个端口：`netstat -ano | findstr LISTENING`，同进程还会占 8765 和 NapCat 反向 WS 端口（本机是 16100，默认 6199）。）
 
 日志里应该看到：
 
