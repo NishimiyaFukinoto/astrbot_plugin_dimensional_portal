@@ -83,16 +83,18 @@ QQ  ←→  腾讯  ←→  NapCat  ←→  AstrBot  ←→  本插件 (aiohttp 
 
 ### 第 1 步：装插件
 
-**方式 A（最省事）**：打开 [Releases](https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/releases/latest)，下载附件 `astrbot_plugin_dimensional_portal.zip`，
+**方式 A（插件市场）**：AstrBot WebUI → 插件 → 插件市场，搜索「**次元门**」或 `dimensional_portal`，点安装即可。
+
+**方式 B（压缩包）**：打开 [Releases](https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/releases/latest)，下载附件 `astrbot_plugin_dimensional_portal.zip`，
 在 AstrBot WebUI → 插件 → 安装插件 → **导入压缩包**，选这个 zip 即可（不需要 git、不需要命令行）。
 
-**方式 B**：同样在「安装插件」里直接填仓库地址：
+**方式 C**：同样在「安装插件」里直接填仓库地址：
 
 ```
 https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal
 ```
 
-**方式 C**：手动把本仓库的 `plugin/` 整个目录拷到：
+**方式 D**：手动把本仓库的 `plugin/` 整个目录拷到：
 
 ```
 <AstrBot 实例目录>/core/data/plugins/astrbot_plugin_dimensional_portal/
@@ -154,14 +156,16 @@ var TOKEN = "和插件配置里一模一样的 token";
 
    第一次启动时 `admin_token` 为空，插件会自动生成一个密钥并写回配置，所以这行以后一直有效。
 2. 打开后能看：手机在线状态、机型/分辨率/电量/前台应用、队列长度；能改：QQ 白名单（chips 点 × 删除、
-   输入框回车添加，至少保留一个号）；能点：**急停**（清空还没下发的任务）。
+   输入框回车添加，至少保留一个号）、**安全策略**（敏感界面是否允许截图 / 是否允许点击输入、限流、超时、
+   离线判定、截图质量与体积上限，改完立刻生效不用重载）；能翻：**操作审计**（谁在什么时候执行了什么动作、
+   谁被白名单/限流/敏感界面拦下，分页加载）；能点：**急停**（清空还没下发的任务）。
 
 几个注意点：
 
 - 链接里的 `k` 就是密钥，**别转发**；觉得泄露了就把配置里的 `admin_token` 改掉再重载插件。
 - 不想开控制台？把 `admin_token` 填成 `off`，四个控制台路由会彻底不注册（访问返回 404）。
 - 控制台只监听插件自己的端口，不会额外开新端口；同一 IP 连续输错 10 次会锁 60 秒。
-- V1 只有「设备状态 / 白名单 / 急停」，安全策略开关和审计列表在 V2。
+- 控制台分两版演进：V1 是「设备状态 / 白名单 / 急停」，V2（当前）加了安全策略开关与操作审计。
 
 ## 示例对话
 
@@ -190,7 +194,7 @@ var TOKEN = "和插件配置里一模一样的 token";
 | `debug_token` | **正式使用请留空**；非空会开一个能绕过白名单的调试接口 |
 
 <details>
-<summary>完整配置项（14 项）</summary>
+<summary>完整配置项（15 项）</summary>
 
 | 配置项（面板显示名） | 说明 | 默认值 |
 | --- | --- | --- |
@@ -199,6 +203,7 @@ var TOKEN = "和插件配置里一模一样的 token";
 | `listen_port`（监听端口） | 被占用时修改此项并重载插件 | `8765` |
 | `allowed_user_ids`（QQ号白名单） | 逗号分隔；只决定**谁能遥控手机**，不影响在 AstrBot 里聊天；留空表示不限制，仅建议调试时使用 | 空 |
 | `debug_token`（调试密钥） | 非空时启用 `POST /debug/submit`（绕过白名单与限流，仅供本机联调） | 空 |
+| `admin_token`（管理控制台密钥） | 留空则首次启动自动生成并写回配置；填 `off` 彻底关闭控制台路由 | 空 |
 | `rate_limit_per_minute`（每分钟操作上限） | 单用户 60 秒内允许的任务数 | `20` |
 | `task_timeout_ms`（任务超时） | 单位毫秒；截图类任务自动放宽 | `20000` |
 | `offline_after_seconds`（离线判定） | 超过该时长未收到心跳即视为离线 | `40` |
@@ -235,6 +240,7 @@ M3（相机拍照录像）、M4（下载安装 APK）、M5（前台保活加固�
 - **`token` 必须改**，且不要提交到仓库。
 - **白名单必须非空**。`allowed_user_ids` 为空等于任何能给机器人发消息的人都能操作你的手机。
 - **两套白名单别混**：能不能和机器人聊天由 AstrBot 自己的会话/白名单设置决定；`allowed_user_ids` 只决定「能不能遥控手机」，名单外的人聊天不受影响（他们的请求里不会带 `phone_*` 工具）。
+- **截图会经由腾讯的服务器**（QQ 通道），等于把画面发给第三方；不想传的界面靠 `sensitive_packages` 拦掉。
 - **敏感界面默认不截图**（支付、密码、验证码、银行类）；截图后还会按手机回报的真实前台包名和界面文字再查一次。
 - **敏感界面默认不能写**：点击/长按/滑动/打字/按键/开应用在敏感应用上都拒绝；确实需要时在配置里打开 `allow_sensitive_write`，用完关掉。
 - **黑名单按真实包名复查**：用中文名「微信」开应用，手机回报真实包名后仍会被拦。
@@ -329,9 +335,12 @@ vivo/iQOO 还可能在第一次弹「应用跳转」确认框，点「始终打�
 # 不需要真机：假手机客户端跑通 心跳 → 长轮询 → 执行 → 回传（35 项断言）
 python tests/smoke_test.py
 
-# 真插件类 + 真 aiohttp + 假手机，直接调工具函数（46 项断言）
+# 真插件类 + 真 aiohttp + 假手机，直接调工具函数（48 项断言）
 # 必须用 AstrBot 实例的 venv python，系统 python 缺 astrbot 依赖
 "<实例目录>/venv/Scripts/python.exe" tests/live_server.py
+
+# 管理控制台：鉴权、白名单、策略保存、审计分页（58 项断言）
+python tests/admin_console_test.py
 
 # 在 AstrBot 环境里验证 11 个工具都能注册（docstring → JSON Schema）
 python tests/import_check.py

@@ -119,7 +119,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 | 项目 | 状态 |
 | --- | --- |
 | 假手机端到端测试 `tests/smoke_test.py` | ✅ 35/35 通过 |
-| 真插件类 + 真 aiohttp 测试 `tests/live_server.py` | ✅ 46/46 通过（需实例 venv python） |
+| 真插件类 + 真 aiohttp 测试 `tests/live_server.py` | ✅ 48/48 通过（需实例 venv python） |
 | 真实 AstrBot 环境里 11 个工具注册 `tests/import_check.py` | ✅ 全部通过 |
 | 调试下发端点 `/debug/submit` | ✅ 回归时用过；现已清空 `debug_token` 关闭 |
 | 文档（README / INSTALL / PROTOCOL / PLAN / STATUS） | ✅ 已写 |

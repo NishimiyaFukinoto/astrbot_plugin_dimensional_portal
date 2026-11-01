@@ -1,8 +1,46 @@
 name: astrbot_plugin_dimensional_portal
 display_name: 次元门
-desc: 让 AstrBot 通过 QQ 远程操控安卓手机：截图看界面、点击滑动、输入文字、打开应用。手机端用 AutoX.js 执行，不需要 root。
-short_desc: QQ 远程操控安卓手机
+short_desc: 用 QQ 里的 AI 远程操控安卓手机
+desc: |
+  **次元门**（Dimensional Portal）——让 AstrBot 里的大模型变成你手机的手：在 QQ 里说一句话，
+  它就能截图看你手机在显示什么，然后点击、滑动、长按、输入文字、按返回键、打开应用。
+  全部通过无障碍服务完成，**不需要 root**，手机上也不装第二个模型。
+
+  ### 能做什么
+  - **看**：截图直接发到 QQ；返回界面控件树（文字 / 坐标 / 是否可点 / 是否可输入），文本模型也能读懂界面
+  - **动**：点击、长按、滑动、输入文字（可回车提交）、系统按键（返回 / 主页 / 多任务 / 删除 / 音量）
+  - **找**：按文字找到控件再点击，可精确匹配、可指定第几个
+  - **开**：按应用名或包名打开 App，并能识别"被系统拦下了、跳到了别的应用"
+  - **管**：设备在线状态、电量、分辨率、当前前台应用，随时急停
+
+  ### 怎么做的
+  - 电脑跑 AstrBot 和本插件（aiohttp，默认 8765 端口），手机跑一个 **AutoX.js** 脚本当"手"
+  - 手机常在 CGNAT / 移动网络后面，所以永远是**手机主动长轮询电脑**：电脑不需要公网 IP，不需要端口映射
+  - 电脑和手机都装 Tailscale 就能用流量控制；同一 WiFi 下也可直连，脚本内置双地址自动切换
+  - 自带**管理控制台**（浏览器打开 `/console`）：看设备状态、改 QQ 白名单、开关敏感界面截图与点击、翻操作审计、急停
+
+  ### 安全
+  - QQ 号白名单：不在名单里的人照样能跟机器人正常聊天，只是看不到这些手机工具
+  - 手机与插件之间的共享密钥、每分钟操作限流、敏感界面（微信 / 支付宝 / 银行 / 系统设置）默认不截图也不点击
+  - 每一步操作都写审计日志，控制台可查
+
+  ### 需要准备
+  - AstrBot 4.29 及以上，一个 QQ 通道（如 NapCat）
+  - 一台装了 [AutoX.js](https://github.com/kkevsekk1/AutoX) 的安卓手机（Android 8+，需开无障碍、悬浮窗权限）
+  - 电脑与手机网络互通（Tailscale 或同一局域网）
+
+  安装步骤见仓库 [docs/INSTALL.md](https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/blob/main/docs/INSTALL.md)，
+  协议说明见 [docs/PROTOCOL.md](https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/blob/main/docs/PROTOCOL.md)。
 version: 0.4.0
-author: 次元门
-repo: "https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal"
+author: 西宫吹乃
+repo: https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal
 astrbot_version: ">=4.29.0"
+support_platforms:
+  - aiocqhttp
+social_link: https://github.com/NishimiyaFukinoto
+tags:
+  - 远程控制
+  - 安卓自动化
+  - 截图
+  - AutoX.js
+  - QQ
