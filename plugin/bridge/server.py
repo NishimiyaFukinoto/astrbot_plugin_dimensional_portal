@@ -39,6 +39,9 @@ DEFAULT_MAX_BODY = 16 * 1024 * 1024  # 截图 base64 走这条通道，留足余
 ADMIN_MAX_FAILS = 10
 ADMIN_FAIL_WINDOW_S = 60.0
 CONSOLE_HTML_PATH = Path(__file__).with_name("console.html")
+CONSOLE_ASSET_DIR = Path(__file__).with_name("assets")
+# 控制台只允许读这几张背景图（白名单即全部可公开的文件）
+CONSOLE_ASSETS = ("bg-wide.jpg", "bg-tall.jpg")
 
 
 def _token_match(supplied: str, expected: str) -> bool:
@@ -104,6 +107,7 @@ class PhoneBridgeServer:
         if self.console is None or not self.admin_token or self.admin_token.lower() == "off":
             return
         self.app.router.add_get("/console", self.handle_console)
+        self.app.router.add_get("/console-assets/{name}", self.handle_console_asset)
         self.app.router.add_get("/admin/state", self.handle_admin_state)
         self.app.router.add_post("/admin/config", self.handle_admin_config)
         self.app.router.add_post("/admin/stop", self.handle_admin_stop)
@@ -380,9 +384,28 @@ class PhoneBridgeServer:
         resp.headers["Referrer-Policy"] = "no-referrer"
         resp.headers["X-Frame-Options"] = "DENY"
         resp.headers["Content-Security-Policy"] = (
-            "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'"
+            "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; "
+            "script-src 'unsafe-inline'; connect-src 'self'"
         )
         return resp
+
+    async def handle_console_asset(self, request: web.Request) -> web.StreamResponse:
+        """控制台的背景图。只认白名单里的文件名，不带 token 也能取（纯装饰）。"""
+        name = (request.match_info.get("name") or "").strip()
+        if name not in CONSOLE_ASSETS:
+            return web.Response(status=404, text="Not Found")
+        path = CONSOLE_ASSET_DIR / name
+        if not path.is_file():
+            log.warning("[dimensional-portal] 控制台素材缺失：%s", path)
+            return web.Response(status=404, text="Not Found")
+        return web.FileResponse(
+            path,
+            headers={
+                "Cache-Control": "public, max-age=86400",
+                "Content-Type": "image/jpeg",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
 
     async def handle_admin_state(self, request: web.Request) -> web.StreamResponse:
         guard = self._admin_guard(request)

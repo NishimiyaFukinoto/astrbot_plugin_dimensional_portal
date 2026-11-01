@@ -374,6 +374,9 @@ aiohttp      # AstrBot 自带；插件只用它 + 标准库
 - [NapCat](https://github.com/NapNeko/NapCatQQ) —— QQ 协议端
 - [AutoX.js](https://github.com/autox-community/AutoX) —— 手机端无障碍自动化
 - [Tailscale](https://tailscale.com/) —— 内网穿透（可选）
+- [Unsplash](https://unsplash.com/license) —— 控制台背景照片（Unsplash License，免费商用），
+  横版 [「樱花与晴空」](https://unsplash.com/photos/1612875295877-ff60dff48e71)、
+  竖版 [「蓝天下的樱树」](https://unsplash.com/photos/1610005908273-cf9e5b615076)
 
 ## License
 

@@ -1,7 +1,6 @@
 # 管理控制台 · 执行方案
 
-> 状态：**V1 已上线，V1.1 视觉重做（唯美动漫风）已完成**；V2 功能（安全策略开关、审计列表）待做。
-> 起因：加个白名单得手动改 JSON 文件，太难用了。
+> 状态：**V1 已上线；V1.2 视觉重做（明色·樱空）已完成**；V2 功能（安全策略开关、审计列表）待做。
 
 ## 实现现状
 
@@ -10,18 +9,28 @@
 | `/console?k=` + 302 本机免密钥 | ✅ 已上线 |
 | `/admin/state` `/admin/config` `/admin/stop` | ✅ 已上线 |
 | 设备状态卡 / QQ 白名单增删 / 急停 | ✅ 已上线 |
-| 视觉：深色 → **唯美动漫风（夜色·樱吹雪）** | ✅ V1.1，仍是单文件、零外部资源 |
+| 视觉 V1.2：**明色·樱空**（真实照片背景 + 白色玻璃卡） | ✅ 已上线 |
+| `GET /console-assets/<name>` 背景图（白名单两个文件名） | ✅ 已上线 |
 | 安全策略开关（敏感截图、写操作、限流、超时） | ⬜ V2，需要扩 `/admin/config` |
 | 审计日志列表 | ⬜ V2，`/admin/state` 已带 `audit` 尾巴 |
 
-### V1.1 视觉要点（`plugin/bridge/console.html`）
+### V1.2 视觉要点（`plugin/bridge/console.html` + `plugin/bridge/assets/`）
 
-- 氛围：夜色到暮紫的渐变天幕 + 月晕 + 星屑闪烁 + 樱花瓣飘落（纯 CSS，无图片、无字体外链）。
-- 卡片：玻璃拟态（`backdrop-filter: blur(16px)`）+ 顶部 hairline 光带 + 错峰淡入。
-- 状态球：在线为青绿呼吸球 + 涟漪环，离线为珊瑚红；电量用渐变条。
-- 字体：标题走楷/宋 serif 栈，数据走等宽，正文走 PingFang/雅黑。
-- 可访问性：`prefers-reduced-motion` 关闭全部动画；390px / 320px 宽不破版。
+- 背景：Unsplash 实拍（Unsplash License）——桌面用横构图「樱花与晴空」`bg-wide.jpg`（1600×1067，205 KB），
+  窄屏（`@media (max-aspect-ratio: 3/4)`）换竖构图「蓝天下的樱树」`bg-tall.jpg`（1000×1333，154 KB）；
+  上面压一层 30%→90% 的白色渐变纱罩，保证深色文字在任何位置都够对比度。
+- 卡片：白色玻璃（`rgba(255,255,255,.66)` + `backdrop-filter: blur(18px)`）、柔和紫色投影、顶部 hairline 光带。
+- 标题：深玫瑰→靛紫渐变字，外挂白色描边辉光（在亮天空上也清楚）；副标题做成半透明白胶囊。
+- 状态球：在线翡翠绿呼吸 + 涟漪，离线珊瑚红；电量用蓝→粉渐变条。
+- 花瓣：淡粉白 CSS 花瓣（12 片，17–27s），`prefers-reduced-motion` 下整层隐藏。
 - 轮询做了 diff：白名单没变就不重绘，避免每 5 秒重播一次入场动画。
+
+### 背景图为什么要单独开路由
+
+控制台的 CSP 是 `default-src 'none'; style-src/script-src 'unsafe-inline'; connect-src 'self'`，
+原来连图片都被挡住。V1.2 加了 `img-src 'self'`，并新增 `GET /console-assets/{name}`：
+只认 `CONSOLE_ASSETS = ("bg-wide.jpg", "bg-tall.jpg")` 这两个文件名（`web.FileResponse` + `Cache-Control: public, max-age=86400`），
+其它名字一律 404，路径穿越拿不到源码。这两个图不带 token 也能取——它们只是装饰，不含任何设备信息。
 
 ## 0. 目标
 
