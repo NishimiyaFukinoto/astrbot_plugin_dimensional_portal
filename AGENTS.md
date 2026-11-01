@@ -38,6 +38,7 @@ QQ ←→ 腾讯 ←→ NapCat ←→ AstrBot ←→ 本插件 (aiohttp :8765) �
 | `tests/import_check.py` | 在真 AstrBot 环境验证 **11 个工具**全部注册（docstring→JSON Schema） |
 | `tests/admin_console_test.py` | 控制台端到端，**40 项**（真插件类 + 假手机 + 4 个端口，必须实例 venv） |
 | `tools/make_release_zip.py` | 打「WebUI 导入压缩包」能直接装的 zip（支持 `--help` / `--out-dir`） |
+| `tools/make_phone_script.py` | 用 `EXCALIBUR_BASES` / `EXCALIBUR_TOKEN` 环境变量把模板生成为带真实地址的 `phone/excalibur_agent.local.js`（.gitignore 已忽略），推手机用这个 |
 | `tools/check_es5.py` | 手机端脚本 ES5 守卫：扫 `phone/*.js` 里禁止的 ES6 语法（CI 也跑） |
 | `tools/dbg.py` | 走 `/debug/submit` 确定性下发动作（真机回归用） |
 | `tools/reload_plugin.py` / `dash.py` | 用面板 API 重载插件 / 探测面板 |
@@ -146,7 +147,7 @@ python tools/dbg.py '{"action":"open_app","params":{"package":"com.tencent.mm"}}
 | `git push` 报 `unable to fork` | workspace-write 沙箱不给 fork ssh；用 `sandbox_permissions=danger-full-access` 重试 |
 | ego 脚本读文件 ENOENT | ego 的 nodejs `cwd` 是 ego 安装目录；一律写绝对路径，且必须用 `import`（ESM）不能用 `require` |
 | 重复提交把作者身份搞错 | 提交前确认 `git config user.name/user.email`；`noreply` 邮箱会被 GitHub 匹配到**别人**的账号 |
-| NapCat 每秒重连报错、6199 没有监听、AstrBot 日志 `[WinError 10013]` | Windows 的「动态端口保留」（winnat / Hyper-V / WSL2 / Docker）吃掉了该端口。`netsh int ipv4 show excludedportrange protocol=tcp` 看保留区间；修法：换到区间外的端口（AstrBot `platform[0].ws_reverse_port` + NapCat `onebot11_<QQ>.json` 的 `websocketClients[0].url` **两边一起改**），或管理员 `net stop winnat` → `net start winnat` |
+| NapCat 每秒重连报错、6199 没有监听、AstrBot 日志 `[WinError 10013]` | Windows 的「动态端口保留」（winnat / Hyper-V / WSL2 / Docker）吃掉了该端口。`netsh int ipv4 show excludedportrange protocol=tcp` 看保留区间；修法：换到区间外的端口（AstrBot `platform[0].ws_reverse_port` + NapCat `onebot11_<QQ>.json` 的 `websocketClients[0].url` **两边一起改**），或管理员 `net stop winnat` → `net start winnat`。完整复盘见 `docs/INCIDENT-2026-11-01-port-conflict.md` |
 | 截图全黑 | 手机息屏；先唤醒或开「充电时不锁屏」 |
 | `tests/live_server.py` 报 `ModuleNotFoundError: No module named 'deprecated'` | 用了系统 python 跑；脚本会把实例 `core/` 塞进 `sys.path` 但系统 python 没装 AstrBot 依赖。改用实例 venv：`/c/Users/YUZURU/.astrbot_launcher/instances/9040990f-.../venv/Scripts/python.exe tests/live_server.py` |
 | 控制台打不开 / 不知道 `k` 是什么 | `admin_token` 留空时首次启动自动生成并打日志「管理控制台：http://…/console?k=…」；填 `off` 是彻底关闭（四路由 404）；忘了就删掉配置里的值重启，会再生成一串 |
