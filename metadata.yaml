@@ -38,6 +38,7 @@ astrbot_version: ">=4.29.0"
 support_platforms:
   - aiocqhttp
 social_link: https://github.com/NishimiyaFukinoto
+category: 效率
 tags:
   - 远程控制
   - 安卓自动化
