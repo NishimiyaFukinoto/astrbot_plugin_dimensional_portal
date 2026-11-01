@@ -2,7 +2,7 @@
 
 和 smoke_test.py 的区别：
   - smoke_test 只测 bridge/（不碰 astrbot 包、不碰插件类）
-  - 这里加载的是真正的 plugin/main.py，实例化真正的 ExcaliburPhoneBridge，
+  - 这里加载的是真正的 plugin/main.py，实例化真正的 DimensionalPortalPhoneBridge，
     调用它真正的 initialize() 起 aiohttp，再直接调 phone_* 工具函数
 
 所以能提前抓到「initialize 起不来 / 工具里 _gate 逻辑写错 / event.send 用法不对」这类问题。
@@ -71,7 +71,7 @@ def check(name: str, cond: bool, extra: str = "") -> None:
 
 
 def load_plugin_module():
-    pkg_name = "astrbot_plugin_excalibur"
+    pkg_name = "astrbot_plugin_dimensional_portal"
     pkg = types.ModuleType(pkg_name)
     pkg.__path__ = [str(PLUGIN)]
     sys.modules[pkg_name] = pkg
@@ -245,7 +245,7 @@ async def main() -> int:
         "package_blacklist": "com.android.systemui,com.tencent.mm",
         "debug_token": "debug-token",
     }
-    plugin = module.ExcaliburPhoneBridge(None, cfg)
+    plugin = module.DimensionalPortalPhoneBridge(None, cfg)
 
     print(f"\n[1] initialize() 真实监听 {HOST}:{PORT}")
     await plugin.initialize()
@@ -291,16 +291,16 @@ async def main() -> int:
 
             print("\n[4] 直接调工具函数（走真实 _gate → _submit → HTTP）")
             ev = FakeEvent()
-            status = await module.ExcaliburPhoneBridge.phone_status(plugin, ev)
+            status = await module.DimensionalPortalPhoneBridge.phone_status(plugin, ev)
             check("phone_status 报在线", "在线" in status and "1080x2400" in status, status)
 
-            tap = await module.ExcaliburPhoneBridge.phone_tap(plugin, ev, 540, 1200)
+            tap = await module.DimensionalPortalPhoneBridge.phone_tap(plugin, ev, 540, 1200)
             check("phone_tap 成功", "已点击" in tap, tap)
 
-            lp = await module.ExcaliburPhoneBridge.phone_long_press(plugin, ev, 540, 1200, 900)
+            lp = await module.DimensionalPortalPhoneBridge.phone_long_press(plugin, ev, 540, 1200, 900)
             check("phone_long_press 成功", "已长按" in lp and "900ms" in lp, lp)
 
-            sw = await module.ExcaliburPhoneBridge.phone_swipe(
+            sw = await module.DimensionalPortalPhoneBridge.phone_swipe(
                 plugin, ev, 900, 2000, 200, 400, 300
             )
             check(
@@ -309,16 +309,16 @@ async def main() -> int:
                 sw,
             )
 
-            typed = await module.ExcaliburPhoneBridge.phone_type(plugin, ev, "你好")
+            typed = await module.DimensionalPortalPhoneBridge.phone_type(plugin, ev, "你好")
             check("phone_type 成功", "已输入" in typed and "你好" in typed, typed)
 
-            blank = await module.ExcaliburPhoneBridge.phone_type(plugin, ev, "   ")
+            blank = await module.DimensionalPortalPhoneBridge.phone_type(plugin, ev, "   ")
             check("phone_type 拒绝纯空格", "输入内容为空" in blank, blank)
 
-            oob = await module.ExcaliburPhoneBridge.phone_tap(plugin, ev, 5000, 5000)
+            oob = await module.DimensionalPortalPhoneBridge.phone_tap(plugin, ev, 5000, 5000)
             check("越界坐标被拦", "超出屏幕范围" in oob, oob)
 
-            ft = await module.ExcaliburPhoneBridge.phone_find_tap(plugin, ev, "设置", 0, True)
+            ft = await module.DimensionalPortalPhoneBridge.phone_find_tap(plugin, ev, "设置", 0, True)
             check("phone_find_tap 找到并点击", "找到" in ft and "@(900,2200)" in ft, ft)
 
             async with session.post(
@@ -332,35 +332,35 @@ async def main() -> int:
             check("调试任务拿到真实结果",
                   (dbg.get("data") or {}).get("clicked") == [10, 20], str(dbg))
 
-            ui = await module.ExcaliburPhoneBridge.phone_ui(plugin, ev, 80)
+            ui = await module.DimensionalPortalPhoneBridge.phone_ui(plugin, ev, 80)
             check("phone_ui 渲染出坐标", "@(900,2200)" in ui, ui)
             check("phone_ui 过滤空容器", "FrameLayout" not in ui, ui)
             check("phone_ui 标出可点", "[可点]" in ui, ui)
 
-            shot = await module.ExcaliburPhoneBridge.phone_see(plugin, ev, False)
+            shot = await module.DimensionalPortalPhoneBridge.phone_see(plugin, ev, False)
             check("phone_see 返回截图摘要", "截图已发到聊天" in shot, shot)
             check("phone_see 真的 send 了 1 条消息", len(ev.sent) == 1, f"{len(ev.sent)} 条")
 
-            how = await module.ExcaliburPhoneBridge.phone_key(plugin, ev, "home")
+            how = await module.DimensionalPortalPhoneBridge.phone_key(plugin, ev, "home")
             check("phone_key 成功", "已按 home" in how, how)
 
-            bad = await module.ExcaliburPhoneBridge.phone_key(plugin, ev, "selfdestruct")
+            bad = await module.DimensionalPortalPhoneBridge.phone_key(plugin, ev, "selfdestruct")
             check("phone_key 拒绝非法按键", "不认识的按键" in bad, bad)
 
             print("\n[5] 白名单拦截")
             stranger = FakeEvent("99999")
-            denied = await module.ExcaliburPhoneBridge.phone_tap(plugin, stranger, 1, 1)
+            denied = await module.DimensionalPortalPhoneBridge.phone_tap(plugin, stranger, 1, 1)
             check("非白名单用户被拒", "没有权限" in denied, denied)
             check("被拒不发送任何消息", not stranger.sent, str(stranger.sent))
 
             print("\n[6] 敏感界面不截图")
             FAKE_STATE["cur_pkg"] = "com.tencent.mm"  # 让下一次心跳上报微信在前台
             await asyncio.sleep(0.6)
-            blocked = await module.ExcaliburPhoneBridge.phone_see(plugin, ev, False)
+            blocked = await module.DimensionalPortalPhoneBridge.phone_see(plugin, ev, False)
             check("微信界面拒绝截图", "不把截图推到 QQ" in blocked, blocked)
             FAKE_STATE["cur_pkg"] = "com.example.notes"
             await asyncio.sleep(0.6)
-            allowed = await module.ExcaliburPhoneBridge.phone_see(plugin, ev, False)
+            allowed = await module.DimensionalPortalPhoneBridge.phone_see(plugin, ev, False)
             check("切走后恢复截图", "截图已发到聊天" in allowed, allowed)
 
             print("\n[7] 敏感截图复查（心跳与截图包名不一致）")
@@ -370,7 +370,7 @@ async def main() -> int:
             shots_before = len(list(Path(module.SHOT_DIR).glob("shot_*.jpg")))
             sent_before = len(ev.sent)
             try:
-                recheck = await module.ExcaliburPhoneBridge.phone_see(plugin, ev, False)
+                recheck = await module.DimensionalPortalPhoneBridge.phone_see(plugin, ev, False)
             except module._ToolError as exc:
                 recheck = str(exc)
             check("截图包名与心跳不一致时拒绝", "已拦截" in recheck, recheck)
@@ -391,20 +391,20 @@ async def main() -> int:
                 ],
             )
             try:
-                keyword_blocked = await module.ExcaliburPhoneBridge.phone_see(plugin, ev, True)
+                keyword_blocked = await module.DimensionalPortalPhoneBridge.phone_see(plugin, ev, True)
             except module._ToolError as exc:
                 keyword_blocked = str(exc)
             check("UI 关键词命中也被拦", "已拦截" in keyword_blocked, keyword_blocked)
             FAKE_STATE["ui_reply"] = None
 
             print("\n[9] 中文应用名开黑名单应用")
-            early = await module.ExcaliburPhoneBridge.phone_open_app(plugin, ev, "com.tencent.mm")
+            early = await module.DimensionalPortalPhoneBridge.phone_open_app(plugin, ev, "com.tencent.mm")
             check("包名形态前置拦截", "禁止列表" in early, early)
             FAKE_STATE["open_app_reply"] = {"launched": True, "pkg": "com.tencent.mm",
                                             "target": "微信", "bounced": False,
                                             "seen": None, "warning": ""}
             try:
-                opened = await module.ExcaliburPhoneBridge.phone_open_app(plugin, ev, "微信")
+                opened = await module.DimensionalPortalPhoneBridge.phone_open_app(plugin, ev, "微信")
             except module._ToolError as exc:
                 opened = str(exc)
             check("按真实 pkg 拦截黑名单", "已拦截" in opened and "com.tencent.mm" in opened, opened)
@@ -413,10 +413,10 @@ async def main() -> int:
             print("\n[10] 敏感界面写操作门槛")
             FAKE_STATE["cur_pkg"] = "com.tencent.mm"
             await asyncio.sleep(0.6)
-            typed = await module.ExcaliburPhoneBridge.phone_type(plugin, ev, "hello")
+            typed = await module.DimensionalPortalPhoneBridge.phone_type(plugin, ev, "hello")
             check("敏感界面打字被拒", "已拦截写操作" in typed, typed)
             plugin.allow_sensitive_write = True
-            typed_ok = await module.ExcaliburPhoneBridge.phone_type(plugin, ev, "hello")
+            typed_ok = await module.DimensionalPortalPhoneBridge.phone_type(plugin, ev, "hello")
             check("打开敏感写开关后放行", "已输入" in typed_ok, typed_ok)
             plugin.allow_sensitive_write = False
             FAKE_STATE["cur_pkg"] = "com.example.notes"
@@ -426,12 +426,12 @@ async def main() -> int:
             FAKE_STATE["overlay"] = False
             FAKE_STATE["overlay_note"] = "没有悬浮窗权限"
             await asyncio.sleep(0.6)
-            off = await module.ExcaliburPhoneBridge.phone_status(plugin, ev)
+            off = await module.DimensionalPortalPhoneBridge.phone_status(plugin, ev)
             check("守卫关了要提示", "悬浮窗守卫：关" in off and "没有悬浮窗权限" in off, off)
             FAKE_STATE["overlay"] = True
             FAKE_STATE["overlay_note"] = "ok(WindowManager)"
             await asyncio.sleep(0.6)
-            on = await module.ExcaliburPhoneBridge.phone_status(plugin, ev)
+            on = await module.DimensionalPortalPhoneBridge.phone_status(plugin, ev)
             check("守卫开着正常", "悬浮窗守卫：开" in on, on)
 
             print("\n[12] open_app 诊断透传")
@@ -439,7 +439,7 @@ async def main() -> int:
             FAKE_STATE["open_app_reply"] = {"launched": True, "pkg": "com.example.notes",
                                             "target": "笔记", "bounced": True,
                                             "seen": None, "warning": warning_text}
-            warned = await module.ExcaliburPhoneBridge.phone_open_app(plugin, ev, "笔记")
+            warned = await module.DimensionalPortalPhoneBridge.phone_open_app(plugin, ev, "笔记")
             check("warning 原文带回", warning_text in warned and "已打开" in warned, warned)
             check("bounced 兜底被说明", "兜底" in warned, warned)
             FAKE_STATE["open_app_reply"] = {"launched": False, "pkg": "com.example.notes",
@@ -449,13 +449,13 @@ async def main() -> int:
                                                      "win": {"pkg": "com.example.launcher"},
                                                      "popup_maybe": True,
                                                      "texts": ["允许", "拒绝"]}}
-            failed = await module.ExcaliburPhoneBridge.phone_open_app(plugin, ev, "不存在")
+            failed = await module.DimensionalPortalPhoneBridge.phone_open_app(plugin, ev, "不存在")
             check("失败时带 seen 快照",
                   "没能打开" in failed and "可能有弹窗" in failed and "允许" in failed, failed)
             FAKE_STATE["open_app_reply"] = None
 
             print("\n[13] 急停")
-            stopd = await module.ExcaliburPhoneBridge.phone_stop(plugin, ev)
+            stopd = await module.DimensionalPortalPhoneBridge.phone_stop(plugin, ev)
             check("phone_stop 有反馈", "急停" in stopd, stopd)
         finally:
             stop.set()

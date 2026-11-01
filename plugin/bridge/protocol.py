@@ -1,4 +1,4 @@
-"""我的圣剑 · 手机桥接 —— 协议常量与轻量工具函数。
+"""次元门 · 手机桥接 —— 协议常量与轻量工具函数。
 
 这个模块只依赖标准库，方便脱离 AstrBot 单独跑测试。
 """
@@ -14,7 +14,7 @@ from typing import Any
 PROTOCOL_VERSION = 1
 
 # ---------------------------------------------------------------- 动作名
-# 手机端 executor 里的 switch 分支必须和这里一一对应（见 phone/excalibur_agent.js）。
+# 手机端 executor 里的 switch 分支必须和这里一一对应（见 phone/dimensional_portal_agent.js）。
 ACT_SCREEN = "screen"
 ACT_UI = "ui"
 ACT_TAP = "tap"

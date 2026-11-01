@@ -79,8 +79,8 @@ def _cfg(port: int, admin_token: str) -> dict[str, Any]:
 
 async def main() -> int:
     module = live.load_plugin_module()
-    tmp = Path(tempfile.mkdtemp(prefix="excalibur-admin-"))
-    os.environ["EXCALIBUR_AUDIT_PATH"] = str(tmp / "audit.jsonl")
+    tmp = Path(tempfile.mkdtemp(prefix="dimensional_portal-admin-"))
+    os.environ["DIMENSIONAL_PORTAL_AUDIT_PATH"] = str(tmp / "audit.jsonl")
 
     live.HOST = "127.0.0.1"
     live.PORT = 18770
@@ -99,7 +99,7 @@ async def main() -> int:
 
     print("\n[1] 启动主实例（admin_token 已配置）")
     cfg_path = tmp / "config-main.json"
-    plugin = module.ExcaliburPhoneBridge(None, FakeConfig(_cfg(18770, ADMIN), cfg_path))
+    plugin = module.DimensionalPortalPhoneBridge(None, FakeConfig(_cfg(18770, ADMIN), cfg_path))
     await plugin.initialize()
     live.check("插件服务已启动", plugin.server.running)
     live.check("控制台路由已注册", plugin.server.admin_enabled)
@@ -115,7 +115,7 @@ async def main() -> int:
             print("\n[2] 鉴权")
             status, body = await _get(session, f"{base}/console?k=wrong")
             live.check("控制台错误 k → 403", status == 403, f"status={status}")
-            live.check("控制台错 k 不返回页面正文", "<!DOCTYPE" not in body and "我的圣剑" not in body)
+            live.check("控制台错 k 不返回页面正文", "<!DOCTYPE" not in body and "次元门" not in body)
             status, body = await _get(session, f"{base}/console?k={ADMIN}")
             live.check("控制台正确 k → 200", status == 200, f"status={status}")
             live.check("返回单文件 HTML", "<!DOCTYPE html>" in body and "QQ 白名单" in body)
@@ -193,7 +193,7 @@ async def main() -> int:
                 "无白名单字段时忽略请求",
                 status == 200 and json.loads(body)["applied"]["allowed_user_ids"] == ["10001"],
             )
-            audit_lines = Path(os.environ["EXCALIBUR_AUDIT_PATH"]).read_text(encoding="utf-8").splitlines()
+            audit_lines = Path(os.environ["DIMENSIONAL_PORTAL_AUDIT_PATH"]).read_text(encoding="utf-8").splitlines()
             kinds = [json.loads(line).get("kind") for line in audit_lines if line.strip()]
             live.check("配置改动写了审计", "admin" in kinds, str(kinds))
 
@@ -218,7 +218,7 @@ async def main() -> int:
 
     print("\n[5] 急停清空排队任务（独立实例）")
     # 单开一个没有假手机的实例：队列里躺着的任务不会被长轮询叼走，能稳定验证 cleared 数量。
-    stopper = module.ExcaliburPhoneBridge(None, FakeConfig(_cfg(18773, ADMIN), tmp / "config-stop.json"))
+    stopper = module.DimensionalPortalPhoneBridge(None, FakeConfig(_cfg(18773, ADMIN), tmp / "config-stop.json"))
     await stopper.initialize()
     tasks = [
         asyncio.create_task(
@@ -241,7 +241,7 @@ async def main() -> int:
 
     print("\n[6] admin_token 留空 → 自动生成")
     auto_path = tmp / "config-auto.json"
-    plugin2 = module.ExcaliburPhoneBridge(None, FakeConfig(_cfg(18771, ""), auto_path))
+    plugin2 = module.DimensionalPortalPhoneBridge(None, FakeConfig(_cfg(18771, ""), auto_path))
     await plugin2.initialize()
     token = str(plugin2.config.get("admin_token") or "")
     live.check("生成了 admin_token", plugin2.server.admin_enabled and len(token) >= 24, token)
@@ -249,11 +249,11 @@ async def main() -> int:
     live.check("自动生成的 token 已落盘", saved2.get("admin_token") == token)
     async with aiohttp.ClientSession() as session:
         status, body = await _get(session, f"http://127.0.0.1:18771/console?k={token}")
-        live.check("自动生成的 token 能打开页面", status == 200 and "我的圣剑" in body)
+        live.check("自动生成的 token 能打开页面", status == 200 and "次元门" in body)
     await plugin2.terminate()
 
     print("\n[7] admin_token=off → 控制台彻底关闭")
-    plugin3 = module.ExcaliburPhoneBridge(None, FakeConfig(_cfg(18772, "off"), tmp / "config-off.json"))
+    plugin3 = module.DimensionalPortalPhoneBridge(None, FakeConfig(_cfg(18772, "off"), tmp / "config-off.json"))
     await plugin3.initialize()
     live.check("off 时不注册控制台", not plugin3.server.admin_enabled)
     async with aiohttp.ClientSession() as session:

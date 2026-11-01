@@ -143,7 +143,7 @@ class SafetyPolicy:
                 fh.write(json.dumps(record, ensure_ascii=False) + "\n")
         except OSError as exc:
             # 审计写失败不该打断工具调用，但也不能完全静默——排查时要能看见。
-            log.warning("[excalibur] 审计日志写入失败（%s）：%s", self.audit_path, exc)
+            log.warning("[dimensional-portal] 审计日志写入失败（%s）：%s", self.audit_path, exc)
 
     def _rotate_audit(self) -> None:
         """审计日志超过阈值就把当前文件改成 .1（只保留 1 份备份）。"""
@@ -162,4 +162,4 @@ class SafetyPolicy:
                     dst.unlink(missing_ok=True)
                     src.replace(dst)
             except OSError as exc:
-                log.warning("[excalibur] 审计日志轮转失败（%s -> %s）：%s", src, dst, exc)
+                log.warning("[dimensional-portal] 审计日志轮转失败（%s -> %s）：%s", src, dst, exc)

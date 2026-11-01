@@ -5,7 +5,7 @@
 
 跑法：
   venv/Scripts/python.exe tools/reload_plugin.py
-  venv/Scripts/python.exe tools/reload_plugin.py --name astrbot_plugin_excalibur
+  venv/Scripts/python.exe tools/reload_plugin.py --name astrbot_plugin_dimensional_portal
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ def mint_token(username: str, secret: str) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--name", default="astrbot_plugin_excalibur")
+    ap.add_argument("--name", default="astrbot_plugin_dimensional_portal")
     ap.add_argument("--base", default=DEFAULT_BASE)
     args = ap.parse_args()
 

@@ -35,7 +35,7 @@ jobs:
         run: ruff check plugin tests tools
 
       - name: 手机脚本语法检查（Node 的宽松解析）
-        run: node --check phone/excalibur_agent.js
+        run: node --check phone/dimensional_portal_agent.js
 
       - name: 手机脚本必须是纯 ES5（Rhino 不认 ES6）
         run: python tools/check_es5.py

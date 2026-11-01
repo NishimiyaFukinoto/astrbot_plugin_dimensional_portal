@@ -26,12 +26,12 @@ labels: bug
 | 插件版本 | <!-- WebUI 插件页 / metadata.yaml 里的 version --> |
 | AstrBot 版本 | |
 | 手机型号 / Android 版本 | |
-| 手机端脚本版本 | <!-- excalibur_agent.js 顶部 AGENT_VERSION --> |
+| 手机端脚本版本 | <!-- dimensional_portal_agent.js 顶部 AGENT_VERSION --> |
 | 连接方式 | <!-- 局域网 / Tailscale --> |
 
 ## 日志
 
-<!-- 插件日志（AstrBot 控制台里 [excalibur] 开头的行），请删除 token、QQ 号、IP 等隐私信息 -->
+<!-- 插件日志（AstrBot 控制台里 [dimensional-portal] 开头的行），请删除 token、QQ 号、IP 等隐私信息 -->
 
 ```text
 

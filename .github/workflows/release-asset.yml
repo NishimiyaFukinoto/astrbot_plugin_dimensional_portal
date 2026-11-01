@@ -31,7 +31,7 @@ jobs:
           python - <<'PY'
           import shutil, zipfile
           from pathlib import Path
-          name = "astrbot_plugin_excalibur"
+          name = "astrbot_plugin_dimensional_portal"
           src = Path("plugin")
           out = Path(f"{name}.zip")
           with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -52,5 +52,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: astrbot_plugin_excalibur.zip
+          files: astrbot_plugin_dimensional_portal.zip
           fail_on_unmatched_files: true

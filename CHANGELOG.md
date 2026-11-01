@@ -2,6 +2,21 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.3.0] - 2026-11-01
+
+### 变更（**破坏性**：包名与仓库名改名）
+- 项目更名为 **次元门 / Dimensional Portal**（原名「我的圣剑 / Excalibur」）
+- 插件包名 `astrbot_plugin_excalibur` → **`astrbot_plugin_dimensional_portal`**
+  （WebUI 里显示的中文名仍是「次元门」，路径不用中文以免报错）
+- 手机脚本 `excalibur_agent.js` → **`dimensional_portal_agent.js`**
+- 环境变量 `EXCALIBUR_*` → **`DIMENSIONAL_PORTAL_*`**
+- 插件类 `ExcaliburPhoneBridge` → **`DimensionalPortalPhoneBridge`**
+- healthz 的 `service` 字段 → `dimensional-portal-phone-bridge`
+
+### 升级注意
+- 老用户请先停插件 → 删除旧的 `astrbot_plugin_excalibur` 目录与配置 → 装新的
+  `astrbot_plugin_dimensional_portal`（白名单等配置要重新填，或把旧配置改名后复用）
+
 ## [Unreleased]
 
 ### 新增
@@ -60,14 +75,14 @@
 
 ### 新增
 
-- 插件端（`astrbot_plugin_excalibur`）
+- 插件端（`astrbot_plugin_dimensional_portal`）
   - 注册 11 个 LLM 工具：`phone_status` `phone_see` `phone_ui` `phone_tap` `phone_long_press`
     `phone_swipe` `phone_type` `phone_key` `phone_open_app` `phone_find_tap` `phone_stop`
   - aiohttp 服务：`POST /hb` 心跳、`GET /poll` 长轮询、`POST /result` 回传、`GET /healthz`
   - 可选调试口 `POST /debug/submit`（仅 `debug_token` 非空时注册）
   - 安全：QQ 白名单、20 次/分钟限流、包名黑名单、敏感界面不截图、审计日志、急停
   - `token` 为空时拒绝启动 HTTP 服务，避免裸奔
-- 手机端（`phone/excalibur_agent.js`，AutoX.js）
+- 手机端（`phone/dimensional_portal_agent.js`，AutoX.js）
   - 心跳 + 长轮询主循环，多地址自动切换（Tailscale ↔ 局域网）
   - 截图（JPEG，可调质量）、UI 控件树（BFS 采集，弹窗/长按菜单也能读到）
   - 点击、长按、滑动、输入（`setText` → 全局 → 剪贴板三级兜底）、系统按键、打开应用、按文字查找

@@ -1,14 +1,14 @@
 <div align="center">
 
-<img src="assets/logo.png" width="132" alt="Excalibur">
+<img src="assets/logo.png" width="132" alt="Dimensional Portal">
 
-# 我的圣剑 · Excalibur
+# 次元门 · Dimensional Portal
 
 **让 QQ 上的 AI 帮你操作自己的安卓手机**
 
-<a href="https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/releases/latest"><img src="https://img.shields.io/github/v/release/NishimiyaFukinoto/astrbot_plugin_excalibur?display_name=tag&label=release" alt="release"></a>
-<a href="https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/actions/workflows/tests.yml"><img src="https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/actions/workflows/tests.yml/badge.svg" alt="tests"></a>
-<a href="LICENSE"><img src="https://img.shields.io/github/license/NishimiyaFukinoto/astrbot_plugin_excalibur" alt="license"></a>
+<a href="https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/releases/latest"><img src="https://img.shields.io/github/v/release/NishimiyaFukinoto/astrbot_plugin_dimensional_portal?display_name=tag&label=release" alt="release"></a>
+<a href="https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/actions/workflows/tests.yml"><img src="https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/actions/workflows/tests.yml/badge.svg" alt="tests"></a>
+<a href="LICENSE"><img src="https://img.shields.io/github/license/NishimiyaFukinoto/astrbot_plugin_dimensional_portal" alt="license"></a>
 <img src="https://img.shields.io/badge/AstrBot-%E2%89%A54.29.0-blueviolet" alt="AstrBot">
 <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python">
 <img src="https://img.shields.io/badge/Android-8%2B-green" alt="Android">
@@ -81,19 +81,19 @@ QQ  ←→  腾讯  ←→  NapCat  ←→  AstrBot  ←→  本插件 (aiohttp 
 
 ### 第 1 步：装插件
 
-**方式 A（最省事）**：打开 [Releases](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/releases/latest)，下载附件 `astrbot_plugin_excalibur.zip`，
+**方式 A（最省事）**：打开 [Releases](https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/releases/latest)，下载附件 `astrbot_plugin_dimensional_portal.zip`，
 在 AstrBot WebUI → 插件 → 安装插件 → **导入压缩包**，选这个 zip 即可（不需要 git、不需要命令行）。
 
 **方式 B**：同样在「安装插件」里直接填仓库地址：
 
 ```
-https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur
+https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal
 ```
 
 **方式 C**：手动把本仓库的 `plugin/` 整个目录拷到：
 
 ```
-<AstrBot 实例目录>/core/data/plugins/astrbot_plugin_excalibur/
+<AstrBot 实例目录>/core/data/plugins/astrbot_plugin_dimensional_portal/
 ```
 
 > [!IMPORTANT]
@@ -104,7 +104,7 @@ https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur
 ### 第 2 步：装手机端
 
 1. 手机上安装 [AutoX.js](https://github.com/autox-community/AutoX)（开源无障碍自动化，不需要 root）。
-2. 把 [`phone/excalibur_agent.js`](phone/excalibur_agent.js) 传到手机，用 AutoX.js 打开，改文件顶部的两处：
+2. 把 [`phone/dimensional_portal_agent.js`](phone/dimensional_portal_agent.js) 传到手机，用 AutoX.js 打开，改文件顶部的两处：
 
 ```js
 var BASES = [
@@ -147,7 +147,7 @@ var TOKEN = "和插件配置里一模一样的 token";
 1. 插件启动后在日志里找这一行：
 
    ```
-   [excalibur] 管理控制台：http://192.168.1.10:8765/console?k=xxxxx
+   [dimensional-portal] 管理控制台：http://192.168.1.10:8765/console?k=xxxxx
    ```
 
    第一次启动时 `admin_token` 为空，插件会自动生成一个密钥并写回配置，所以这行以后一直有效。
@@ -192,7 +192,7 @@ var TOKEN = "和插件配置里一模一样的 token";
 
 | 配置项（面板显示名） | 说明 | 默认值 |
 | --- | --- | --- |
-| `token`（手机端共享密钥） | 须与 `excalibur_agent.js` 的 `TOKEN` 一致；留空则不启动 HTTP 服务 | 空 |
+| `token`（手机端共享密钥） | 须与 `dimensional_portal_agent.js` 的 `TOKEN` 一致；留空则不启动 HTTP 服务 | 空 |
 | `listen_host`（监听地址） | `0.0.0.0` 表示监听全部网卡 | `0.0.0.0` |
 | `listen_port`（监听端口） | 被占用时修改此项并重载插件 | `8765` |
 | `allowed_user_ids`（允许的 QQ 号） | 逗号分隔；留空表示不限制，仅建议调试时使用 | 空 |
@@ -236,7 +236,7 @@ M3（相机拍照录像）、M4（下载安装 APK）、M5（前台保活加固�
 - **敏感界面默认不能写**：点击/长按/滑动/打字/按键/开应用在敏感应用上都拒绝；确实需要时在配置里打开 `allow_sensitive_write`，用完关掉。
 - **黑名单按真实包名复查**：用中文名「微信」开应用，手机回报真实包名后仍会被拦。
 - **调试口默认关闭**，`debug_token` 用完记得清空。
-- 所有操作都会写审计日志：`<AstrBot 实例目录>/core/data/plugin_data/astrbot_plugin_excalibur/audit.jsonl`。
+- 所有操作都会写审计日志：`<AstrBot 实例目录>/core/data/plugin_data/astrbot_plugin_dimensional_portal/audit.jsonl`。
 
 ## 常见问题
 
@@ -311,8 +311,8 @@ vivo/iQOO 还可能在第一次弹「应用跳转」确认框，点「始终打�
 
 **提 Issue**
 
-- [Bug 报告](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/issues/new?template=bug_report.md)：附插件版本、AstrBot 版本、手机型号与 Android 版本、复现步骤、脱敏后的日志。
-- [功能建议](https://github.com/NishimiyaFukinoto/astrbot_plugin_excalibur/issues/new?template=feature_request.md)：说明使用场景，以及为什么现有工具做不到。
+- [Bug 报告](https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/issues/new?template=bug_report.md)：附插件版本、AstrBot 版本、手机型号与 Android 版本、复现步骤、脱敏后的日志。
+- [功能建议](https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/issues/new?template=feature_request.md)：说明使用场景，以及为什么现有工具做不到。
 
 **提 PR**
 
@@ -334,7 +334,7 @@ python tests/smoke_test.py
 python tests/import_check.py
 
 # 手机端脚本必须保持纯 ES5（Rhino 不认 => / let / const / 模板字符串 / includes）
-node --check phone/excalibur_agent.js
+node --check phone/dimensional_portal_agent.js
 python tools/check_es5.py
 ```
 
@@ -344,7 +344,7 @@ python tools/check_es5.py
 真机回归可以用 `tools/dbg.py` 直接下发动作（需要临时开 `debug_token`）：
 
 ```bash
-EXCALIBUR_DEBUG_TOKEN=xxx python tools/dbg.py '{"action":"status"}'
+DIMENSIONAL_PORTAL_DEBUG_TOKEN=xxx python tools/dbg.py '{"action":"status"}'
 ```
 
 ## 依赖

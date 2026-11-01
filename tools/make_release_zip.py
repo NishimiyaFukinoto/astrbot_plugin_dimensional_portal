@@ -1,10 +1,10 @@
 """打一个可以直接在 AstrBot WebUI「导入压缩包」的插件 zip。
 
-产物：dist/astrbot_plugin_excalibur.zip
-      zip 内只有一层目录 astrbot_plugin_excalibur/，里面是 plugin/ 的内容
+产物：dist/astrbot_plugin_dimensional_portal.zip
+      zip 内只有一层目录 astrbot_plugin_dimensional_portal/，里面是 plugin/ 的内容
       （main.py、metadata.yaml、_conf_schema.json、bridge/、safety/），外加：
         - logo.png                ← 来自 assets/logo.png（放在插件根，插件列表里显示）
-        - phone/excalibur_agent.js ← 手机端脚本（保持占位符版本，方便用户自己改地址/token）
+        - phone/dimensional_portal_agent.js ← 手机端脚本（保持占位符版本，方便用户自己改地址/token）
 
 AstrBot 的安装逻辑见 core/astrbot/core/star/updater.py：
   _resolve_archive_root_dir() 找出唯一顶层目录 → find_plugin_metadata_entry()
@@ -30,9 +30,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PLUGIN_DIR = ROOT / "plugin"
 ASSETS_LOGO = ROOT / "assets" / "logo.png"
-PHONE_SCRIPT = ROOT / "phone" / "excalibur_agent.js"
+PHONE_SCRIPT = ROOT / "phone" / "dimensional_portal_agent.js"
 DIST_DIR = ROOT / "dist"
-NAME = "astrbot_plugin_excalibur"
+NAME = "astrbot_plugin_dimensional_portal"
 SKIP_DIRS = {"__pycache__", "data", ".git"}
 SKIP_SUFFIXES = {".pyc", ".pyo"}
 
@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     if fail:
         print(f"[x] 有文件不在 {NAME}/ 下：{fail[:3]}")
         return 1
-    for must in ("metadata.yaml", "logo.png", "phone/excalibur_agent.js"):
+    for must in ("metadata.yaml", "logo.png", "phone/dimensional_portal_agent.js"):
         if f"{NAME}/{must}" not in names:
             print(f"[x] zip 里缺少 {must}，检查一下再发版")
             return 1

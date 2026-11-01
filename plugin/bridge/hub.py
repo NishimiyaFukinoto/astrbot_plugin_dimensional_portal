@@ -254,7 +254,7 @@ class DeviceHub:
         if fut is None or fut.done():
             # 超时后手机才回结果属于正常现象（手机端可能已经执行过），记一笔方便排查。
             log.warning(
-                "[excalibur] 迟到结果被丢弃：任务 %s（已超时或不存在，手机端可能已执行）",
+                "[dimensional-portal] 迟到结果被丢弃：任务 %s（已超时或不存在，手机端可能已执行）",
                 task_id,
             )
             return False

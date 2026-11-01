@@ -1,5 +1,5 @@
 /**
- * 我的圣剑 —— AutoX.js 执行器
+ * 次元门 —— AutoX.js 执行器
  * ================================================
  * 手机这端只做三件事：
  *   1. 每 10 秒 POST /hb 报一次心跳（设备信息、电量、前台应用、权限状态）
@@ -42,7 +42,7 @@ function nextBase() {
 // 必须和插件配置里的 token 一字不差（在 AstrBot 插件配置里自己填一个别人猜不到的）
 var TOKEN = "改成你的token";
 
-var AGENT_VERSION = "0.2.0";
+var AGENT_VERSION = "0.3.0";
 var HEARTBEAT_MS = 10000;   // 心跳间隔
 var POLL_WAIT_S = 12;       // 长轮询挂起秒数（服务端上限 30）
 var POLL_TIMEOUT_MS = 25000;// 单次 poll 的网络读超时
@@ -64,7 +64,7 @@ function nowMs() {
 }
 
 function log(msg) {
-    console.log("[excalibur] " + msg);
+    console.log("[dimensional-portal] " + msg);
 }
 
 function sleepSafe(ms) {
@@ -488,7 +488,7 @@ function actScreen(job) {
     if (!img) throw new Error("截图失败：没有屏幕录制权限，请在 AutoX.js 里重新运行脚本并允许「屏幕录制」");
 
     var dir = context.getExternalFilesDir(null).getAbsolutePath();
-    var path = dir + "/excalibur_shot.jpg";
+    var path = dir + "/dimensional_portal_shot.jpg";
     try {
         images.save(img, path, "jpg", quality);
     } finally {
@@ -1036,7 +1036,7 @@ function createOverlayGuard() {
 
 function main() {
     log("启动 v" + AGENT_VERSION + " → " + BASE);
-    toast("我的圣剑 已启动");
+    toast("次元门 已启动");
 
     try {
         if (typeof auto !== "undefined" && auto.waitFor) auto.waitFor();

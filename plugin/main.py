@@ -1,4 +1,4 @@
-"""我的圣剑插件（AstrBot v4）。
+"""次元门插件（AstrBot v4）。
 
 QQ → 大肥鱼 → 本插件（aiohttp :8765）→ 手机 AutoX.js 执行器 → 结果回传。
 
@@ -43,7 +43,7 @@ from .bridge.protocol import (
 from .bridge.server import PhoneBridgeServer
 from .safety.policy import SafetyPolicy, _as_list
 
-SHOT_DIR = Path(gettempdir()) / "excalibur_phone"
+SHOT_DIR = Path(gettempdir()) / "dimensional_portal_phone"
 SHOT_KEEP_S = 3600  # 截图临时文件保留 1 小时
 
 # 手机端 actKey 只支持这些；menu/power 等无障碍注入不了的键不要写进来，
@@ -55,13 +55,13 @@ VALID_KEYS = {
 
 def _audit_path() -> Path:
     """审计日志放 AstrBot 的 data/plugin_data 下，不混在插件代码目录里（升级插件不丢）。"""
-    override = os.environ.get("EXCALIBUR_AUDIT_PATH")
+    override = os.environ.get("DIMENSIONAL_PORTAL_AUDIT_PATH")
     if override:
         return Path(override)
     try:
         from astrbot.core.utils.astrbot_path import get_astrbot_plugin_data_path
 
-        base = Path(get_astrbot_plugin_data_path()) / "astrbot_plugin_excalibur"
+        base = Path(get_astrbot_plugin_data_path()) / "astrbot_plugin_dimensional_portal"
     except Exception:  # 老版本没有这个工具函数
         base = Path(__file__).parent / "data"
     try:
@@ -77,7 +77,7 @@ def _cfg_int(value: Any, default: int, key: str) -> int:
         return int(value)
     except (TypeError, ValueError):
         logger.warning(
-            "[excalibur] 配置 %s=%r 不是整数，已回退默认值 %s（去面板改一下）", key, value, default
+            "[dimensional-portal] 配置 %s=%r 不是整数，已回退默认值 %s（去面板改一下）", key, value, default
         )
         return default
 
@@ -87,7 +87,7 @@ def _cfg_float(value: Any, default: float, key: str) -> float:
         return float(value)
     except (TypeError, ValueError):
         logger.warning(
-            "[excalibur] 配置 %s=%r 不是数字，已回退默认值 %s（去面板改一下）", key, value, default
+            "[dimensional-portal] 配置 %s=%r 不是数字，已回退默认值 %s（去面板改一下）", key, value, default
         )
         return default
 
@@ -121,7 +121,7 @@ class _ConsoleAdapter:
     以后 V2 加"安全策略开关"时只改这里，HTTP 层不用动。
     """
 
-    def __init__(self, plugin: "ExcaliburPhoneBridge") -> None:
+    def __init__(self, plugin: "DimensionalPortalPhoneBridge") -> None:
         self.plugin = plugin
 
     def snapshot(self) -> dict[str, Any]:
@@ -178,10 +178,10 @@ class _ConsoleAdapter:
         return out
 
 
-class ExcaliburPhoneBridge(Star):
+class DimensionalPortalPhoneBridge(Star):
     """让「大肥鱼」通过 QQ 远程操控安卓手机：看屏幕、点击、输入、开应用。
 
-    手机端装 AutoX.js 跑 excalibur_agent.js，主动长轮询本插件的 HTTP 端口。
+    手机端装 AutoX.js 跑 dimensional_portal_agent.js，主动长轮询本插件的 HTTP 端口。
     唯一的大脑是 AstrBot 里的模型，手机上不跑任何模型。
     """
 
@@ -230,7 +230,7 @@ class ExcaliburPhoneBridge(Star):
 
         if not self.policy.allowed_user_ids:
             logger.warning(
-                "[excalibur] allowed_user_ids 为空：任何能给大肥鱼发消息的人都能操控手机，"
+                "[dimensional-portal] allowed_user_ids 为空：任何能给大肥鱼发消息的人都能操控手机，"
                 "正式使用前请填上你自己的 QQ 号。",
             )
 
@@ -240,8 +240,8 @@ class ExcaliburPhoneBridge(Star):
         """插件加载时启动 HTTP 服务。端口被占用只记错误，不影响 AstrBot 其它功能。"""
         if not self.server.token:
             logger.error(
-                "[excalibur] 还没填 token：出于安全考虑不启动 HTTP 服务。"
-                "请在插件配置里填一个别人猜不到的字符串（手机端 excalibur_agent.js 的 TOKEN 必须一致），"
+                "[dimensional-portal] 还没填 token：出于安全考虑不启动 HTTP 服务。"
+                "请在插件配置里填一个别人猜不到的字符串（手机端 dimensional_portal_agent.js 的 TOKEN 必须一致），"
                 "然后重载插件。"
             )
             return
@@ -250,7 +250,7 @@ class ExcaliburPhoneBridge(Star):
             await self.server.start()
         except Exception as exc:  # 端口占用、权限等都算
             logger.error(
-                "[excalibur] 无法监听 %s:%s（%s）。换个 listen_port 再重载插件。",
+                "[dimensional-portal] 无法监听 %s:%s（%s）。换个 listen_port 再重载插件。",
                 self.server.host,
                 self.server.port,
                 exc,
@@ -263,11 +263,11 @@ class ExcaliburPhoneBridge(Star):
                 pass
             return
         logger.info(
-            "[excalibur] 就绪：请让手机上的 AutoX.js 脚本连 http://<电脑IP>:%s",
+            "[dimensional-portal] 就绪：请让手机上的 AutoX.js 脚本连 http://<电脑IP>:%s",
             self.server.port,
         )
         if self.server.admin_enabled:
-            logger.info("[excalibur] 管理控制台：%s", self._console_url())
+            logger.info("[dimensional-portal] 管理控制台：%s", self._console_url())
 
     async def terminate(self) -> None:
         await self.server.stop()
@@ -303,7 +303,7 @@ class ExcaliburPhoneBridge(Star):
         """admin_token 为空就现场生成并写盘；填 off 就彻底不做控制台。"""
         raw = str(self.config.get("admin_token", "") or "").strip()
         if raw.lower() == "off":
-            logger.info("[excalibur] 管理控制台已关闭（admin_token=off）")
+            logger.info("[dimensional-portal] 管理控制台已关闭（admin_token=off）")
             return
         if raw:
             self.server.enable_admin(raw)
@@ -316,12 +316,12 @@ class ExcaliburPhoneBridge(Star):
                 saver()
             else:
                 logger.warning(
-                    "[excalibur] 配置不支持 save_config，自动生成的 admin_token 只在本次运行有效"
+                    "[dimensional-portal] 配置不支持 save_config，自动生成的 admin_token 只在本次运行有效"
                 )
             self.server.enable_admin(token)
-            logger.info("[excalibur] 已自动生成 admin_token 并写入插件配置")
+            logger.info("[dimensional-portal] 已自动生成 admin_token 并写入插件配置")
         except Exception as exc:  # 写盘失败也别影响手机桥接
-            logger.error("[excalibur] 自动生成 admin_token 失败：%s", exc)
+            logger.error("[dimensional-portal] 自动生成 admin_token 失败：%s", exc)
 
     def _console_url(self) -> str:
         host = self.server.host
@@ -342,7 +342,7 @@ class ExcaliburPhoneBridge(Star):
             return f"⏳ 操作太频繁：{msg}"
         if not self.hub.online:
             return (
-                "📴 手机不在线。请确认：① AutoX.js 里 excalibur_agent.js 正在运行；"
+                "📴 手机不在线。请确认：① AutoX.js 里 dimensional_portal_agent.js 正在运行；"
                 "② 无障碍服务已开启；③ 手机和电脑在同一网络（或 Tailscale 已连）。"
             )
         # 敏感界面默认也不让动手：不截图保护的是画面，拦不住往密码框里打字/点「确认支付」。
@@ -623,7 +623,7 @@ class ExcaliburPhoneBridge(Star):
             path = self._save_shot(raw)
             await event.send(MessageChain([Image.fromFileSystem(str(path))]))
         except Exception as exc:  # 消息平台出错不影响返回文本
-            logger.error("[excalibur] 发送截图失败：%s", exc)
+            logger.error("[dimensional-portal] 发送截图失败：%s", exc)
             return f"截图已拿到（{w}x{h}，{pkg}），但推到 QQ 失败：{exc}"
 
         summary = f"📸 截图已发到聊天（{w}x{h}，{self._fmt_size(len(raw))}，前台 {pkg}）"
@@ -893,7 +893,7 @@ class ExcaliburPhoneBridge(Star):
             return "⛔ 没有权限"
         dropped = self.hub.emergency_clear()
         self.policy.audit("emergency_stop", user=uid, dropped=dropped)
-        logger.warning("[excalibur] 急停已执行，清空 %s 个任务", dropped)
+        logger.warning("[dimensional-portal] 急停已执行，清空 %s 个任务", dropped)
         return f"🛑 已急停，清空 {dropped} 个待执行任务。手机端正在跑的那一步会做完。"
 
 
@@ -901,4 +901,4 @@ class _ToolError(Exception):
     """工具内部错误，message 直接展示给模型。"""
 
 
-__all__ = ["ExcaliburPhoneBridge"]
+__all__ = ["DimensionalPortalPhoneBridge"]

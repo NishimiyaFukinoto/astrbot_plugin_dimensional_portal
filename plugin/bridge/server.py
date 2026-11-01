@@ -107,7 +107,7 @@ class PhoneBridgeServer:
         self.app.router.add_post("/admin/config", self.handle_admin_config)
         self.app.router.add_post("/admin/stop", self.handle_admin_stop)
         self._admin_routes_added = True
-        log.info("[excalibur] 管理控制台已启用（/console）")
+        log.info("[dimensional-portal] 管理控制台已启用（/console）")
 
     def enable_admin(self, admin_token: str) -> None:
         """initialize() 里自动生成 admin_token 后补注册控制台路由。"""
@@ -137,7 +137,7 @@ class PhoneBridgeServer:
         ip = self._client_ip(request)
         if self._admin_throttled(ip):
             log.warning(
-                "[excalibur] 管理控制台尝试过多 %s %s from %s",
+                "[dimensional-portal] 管理控制台尝试过多 %s %s from %s",
                 request.method,
                 request.path,
                 ip,
@@ -150,7 +150,7 @@ class PhoneBridgeServer:
 
     def _deny_admin(self, request: web.Request) -> web.Response:
         log.warning(
-            "[excalibur] 管理控制台鉴权失败 %s %s from %s",
+            "[dimensional-portal] 管理控制台鉴权失败 %s %s from %s",
             request.method,
             request.path,
             self._client_ip(request),
@@ -163,7 +163,7 @@ class PhoneBridgeServer:
         try:
             self._console_html = CONSOLE_HTML_PATH.read_text(encoding="utf-8")
         except OSError as exc:
-            log.error("[excalibur] 读不到控制台页面 %s：%s", CONSOLE_HTML_PATH, exc)
+            log.error("[dimensional-portal] 读不到控制台页面 %s：%s", CONSOLE_HTML_PATH, exc)
             return None
         return self._console_html
 
@@ -176,7 +176,7 @@ class PhoneBridgeServer:
         await self._site.start()
         self.started_at = time.monotonic()
         log.info(
-            "[excalibur] HTTP 服务已启动 http://%s:%s（token %s）",
+            "[dimensional-portal] HTTP 服务已启动 http://%s:%s（token %s）",
             self.host,
             self.port,
             "已设置" if self.token else "未设置（危险）",
@@ -187,7 +187,7 @@ class PhoneBridgeServer:
             await self._runner.cleanup()
             self._runner = None
             self._site = None
-            log.info("[excalibur] HTTP 服务已停止")
+            log.info("[dimensional-portal] HTTP 服务已停止")
 
     @property
     def running(self) -> bool:
@@ -209,7 +209,7 @@ class PhoneBridgeServer:
 
     def _deny(self, request: web.Request, reason: str) -> web.Response:
         log.warning(
-            "[excalibur] 拒绝 %s %s from %s：%s",
+            "[dimensional-portal] 拒绝 %s %s from %s：%s",
             request.method,
             request.path,
             self._client_ip(request),
@@ -248,7 +248,7 @@ class PhoneBridgeServer:
         }
         resp = self.hub.on_heartbeat(info)
         log.debug(
-            "[excalibur] 心跳 %s %sx%s 电量 %s%% 前台 %s",
+            "[dimensional-portal] 心跳 %s %sx%s 电量 %s%% 前台 %s",
             info["device_id"],
             info["w"],
             info["h"],
@@ -293,7 +293,7 @@ class PhoneBridgeServer:
         error = payload.get("error")
         accepted = self.hub.on_result(task_id, ok, data, error)
         log.info(
-            "[excalibur] 结果 %s %s%s",
+            "[dimensional-portal] 结果 %s %s%s",
             task_id,
             "成功" if ok else "失败",
             "" if accepted else "（已被丢弃：超时或未知任务）",
@@ -302,7 +302,7 @@ class PhoneBridgeServer:
 
     async def handle_healthz(self, request: web.Request) -> web.Response:
         # 不带 token 时只证明「服务活着」，不暴露在线状态/队列长度/运行时长。
-        body: dict[str, Any] = {"ok": True, "service": "excalibur-phone-bridge"}
+        body: dict[str, Any] = {"ok": True, "service": "dimensional-portal-phone-bridge"}
         if not self._authorized(request):
             return web.json_response(body)
         body.update(
@@ -344,7 +344,7 @@ class PhoneBridgeServer:
             return web.json_response({"ok": False, "error": "bad params"}, status=400)
         timeout_ms = _to_int(payload.get("timeout_ms"), 20000)
 
-        log.info("[excalibur] 调试任务 %s %s", action, params)
+        log.info("[dimensional-portal] 调试任务 %s %s", action, params)
         try:
             data = await self.hub.submit(action, params, timeout_ms=timeout_ms)
         except Exception as exc:  # 离线/超时/手机端报错：原样回给调用方
@@ -356,11 +356,11 @@ class PhoneBridgeServer:
     async def handle_console(self, request: web.Request) -> web.StreamResponse:
         ip = self._client_ip(request)
         if self._admin_throttled(ip):
-            log.warning("[excalibur] 管理控制台尝试过多 from %s", ip)
+            log.warning("[dimensional-portal] 管理控制台尝试过多 from %s", ip)
             return web.Response(status=429, text="Too Many Requests")
         if not self._admin_authorized(request):
             self._admin_fail(ip)
-            log.warning("[excalibur] 管理控制台鉴权失败 from %s", ip)
+            log.warning("[dimensional-portal] 管理控制台鉴权失败 from %s", ip)
             return web.Response(status=403, text="Forbidden")
         html = self._load_console_html()
         if html is None:
@@ -405,7 +405,7 @@ class PhoneBridgeServer:
             applied = self.console.apply_config(payload, ip=self._client_ip(request))
         except ValueError as exc:
             return web.json_response({"ok": False, "error": str(exc)}, status=400)
-        log.info("[excalibur] 控制台改了白名单：%s", applied.get("allowed_user_ids"))
+        log.info("[dimensional-portal] 控制台改了白名单：%s", applied.get("allowed_user_ids"))
         return web.json_response({"ok": True, "applied": applied})
 
     async def handle_admin_stop(self, request: web.Request) -> web.StreamResponse:
@@ -413,7 +413,7 @@ class PhoneBridgeServer:
         if guard is not None:
             return guard
         cleared = int(self.console.stop_all())
-        log.info("[excalibur] 控制台急停：清掉排队任务 %s 个", cleared)
+        log.info("[dimensional-portal] 控制台急停：清掉排队任务 %s 个", cleared)
         return web.json_response({"ok": True, "cleared": cleared})
 
 

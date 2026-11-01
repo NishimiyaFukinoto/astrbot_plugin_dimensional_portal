@@ -46,7 +46,7 @@ FAKE_JPEG = b"\xff\xd8\xff\xe0" + b"0" * 512 + b"\xff\xd9"
 
 
 class FakePhone:
-    """模拟 excalibur_agent.js：心跳 + 长轮询 + 执行 + 回传。"""
+    """模拟 dimensional_portal_agent.js：心跳 + 长轮询 + 执行 + 回传。"""
 
     def __init__(self, session: aiohttp.ClientSession) -> None:
         self.session = session

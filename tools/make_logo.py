@@ -107,7 +107,7 @@ def main() -> None:
         font = ImageFont.truetype("C:/Windows/Fonts/georgia.ttf", int(W * 0.058))
     except Exception:
         font = None
-    label = "EXCALIBUR"
+    label = "DIMENSIONAL PORTAL"
     if font:
         box = td.textbbox((0, 0), label, font=font)
         tw = box[2] - box[0]

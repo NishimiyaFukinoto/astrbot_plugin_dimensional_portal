@@ -68,7 +68,7 @@ def main() -> int:
 
     before = {f.name for f in llm_tools.func_list}
 
-    pkg_name = "astrbot_plugin_excalibur"
+    pkg_name = "astrbot_plugin_dimensional_portal"
     pkg = types.ModuleType(pkg_name)
     pkg.__path__ = [str(PLUGIN)]
     sys.modules[pkg_name] = pkg
@@ -105,7 +105,7 @@ def main() -> int:
     if extra:
         print(f"⚠️ 多出来的工具（确认一下是不是有意加的）：{sorted(extra)}")
 
-    cls = module.ExcaliburPhoneBridge
+    cls = module.DimensionalPortalPhoneBridge
     print(f"插件类：{cls.__module__}.{cls.__name__}")
     print(f"有 initialize：{hasattr(cls, 'initialize')}  有 terminate：{hasattr(cls, 'terminate')}")
 

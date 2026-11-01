@@ -1,7 +1,7 @@
 # 通信协议 v1
 
 电脑（插件）和手机（AutoX.js 脚本）之间的全部约定。改任何一边都要同步这里和
-`plugin/bridge/protocol.py`、`phone/excalibur_agent.js` 里的 `AGENT_VERSION` / `PROTOCOL_VERSION`。
+`plugin/bridge/protocol.py`、`phone/dimensional_portal_agent.js` 里的 `AGENT_VERSION` / `PROTOCOL_VERSION`。
 
 ## 角色
 
@@ -101,13 +101,13 @@ token 在插件配置里设置，手机脚本顶部 `TOKEN` 必须一致。用 `
 不带 token 时只回最基本的两项（不暴露在线状态）：
 
 ```json
-{"ok": true, "service": "excalibur-phone-bridge"}
+{"ok": true, "service": "dimensional-portal-phone-bridge"}
 ```
 
 带了正确的 `X-Token`（或 `?token=`）才追加运行细节：
 
 ```json
-{"ok": true, "service": "excalibur-phone-bridge", "online": true, "queue": 0, "uptime_s": 123.4, "ts": 1761...}
+{"ok": true, "service": "dimensional-portal-phone-bridge", "online": true, "queue": 0, "uptime_s": 123.4, "ts": 1761...}
 ```
 
 手机浏览器打开 `http://电脑IP:8765/healthz` 能看到 `ok:true` 就说明网络通了；要看手机在不在线，
@@ -226,7 +226,7 @@ V1 只做三件事：看设备状态、增删 QQ 白名单、急停清队列。�
 
 - 开关：插件配置 `admin_token`
   - 留空 → 首次启动自动生成 `secrets.token_urlsafe(24)` 并写回配置，日志打印
-    `[excalibur] 管理控制台：http://<IP>:8765/console?k=<token>`
+    `[dimensional-portal] 管理控制台：http://<IP>:8765/console?k=<token>`
   - 填 `off` → 四个路由**完全不注册**（访问全是 404）
   - 填其它值 → 用它当密钥
 - 鉴权：`X-Admin-Token` 头，或查询串 `?k=`；`hmac.compare_digest` 比较。
@@ -286,7 +286,7 @@ V1 只做三件事：看设备状态、增删 QQ 白名单、急停清队列。�
   `deny_sensitive_write` 审计。
 - `package_blacklist` 里的包名禁止 `open_app`：包名形态提前拦；中文应用名则在手机
   回报真实 `pkg` 后复查，防止「中文名绕过去」。打开后落到黑名单还会提示用 `phone_key home` 退出。
-- 审计日志写在 AstrBot 的 `data/plugin_data/astrbot_plugin_excalibur/audit.jsonl`
+- 审计日志写在 AstrBot 的 `data/plugin_data/astrbot_plugin_dimensional_portal/audit.jsonl`
   （旧版本没有 `get_astrbot_plugin_data_path` 时退回插件目录下的 `data/`），字段
   `{"ts","kind","user","action","params",...}`，`kind` 有 `task` / `deny_user` / `deny_rate` /
   `deny_screenshot` / `deny_sensitive_write` / `deny_blacklist` / `emergency_stop`。

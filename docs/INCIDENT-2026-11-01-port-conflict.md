@@ -148,3 +148,21 @@ netsh int ipv4 show excludedportrange protocol=tcp
 2. **Windows 的动态端口范围可能被改小**，`show dynamicport tcp` 是排查第一步。
 3. **反向 WS 要改两边**：AstrBot 的 `ws_reverse_port` + NapCat 的 `url`，少改一边就是「连不上」。
 4. **NapCat 退出会回写配置**，改它的 json 必须趁它没运行。
+
+---
+
+## 11. 后续：6199 抢回来了（2026-11-01 晚）
+
+用户要求「还是用 6199，把这个端口抢回来」，于是不再依赖换端口：
+
+1. `tools/fix-port-reservation.ps1`（管理员 PowerShell 运行）把 Windows 的动态端口范围**改回默认**：
+   `net stop winnat` → `netsh int ipv4 set dynamicport tcp start=49152 num=16384`（udp 同）→ `net start winnat`。
+   执行后 `netsh int ipv4 show excludedportrange protocol=tcp` 只剩 `5357`、`13508`、`50000-50059*`，**6099 / 6199 都空出来了**。
+2. 三方配置全部回退：
+   - AstrBot `cmd_config.json` → `platform[0].ws_reverse_port = 6199`
+   - NapCat `onebot11_<QQ>.json` → `websocketClients[0].url = ws://127.0.0.1:6199/ws`
+   - NapCat `webui.json` → `port = 6099`、`host = "::"`
+3. 重启后实测：`127.0.0.1:6199` 由 AstrBot LISTENING、NapCat 侧 ESTABLISHED；`0.0.0.0:6099` 是 NapCat WebUI，控制台链接恢复。
+
+> 教训补充：把动态端口范围改回默认区间（49152–65535）比「换端口」更一劳永逸；
+> 但如果哪天又有人把它改小，同样的问题会重演——所以这篇复盘留着。

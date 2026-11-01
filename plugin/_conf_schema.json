@@ -2,7 +2,7 @@
   "token": {
     "type": "string",
     "description": "手机端共享密钥",
-    "hint": "须与 excalibur_agent.js 中的 TOKEN 一致；留空则不启动 HTTP 服务。",
+    "hint": "须与 dimensional_portal_agent.js 中的 TOKEN 一致；留空则不启动 HTTP 服务。",
     "default": "",
     "obvious_hint": true
   },
