@@ -17,14 +17,19 @@
 - 老用户请先停插件 → 删除旧的 `astrbot_plugin_excalibur` 目录与配置 → 装新的
   `astrbot_plugin_dimensional_portal`（白名单等配置要重新填，或把旧配置改名后复用）
 
-## [Unreleased]
-
 ### 新增
 - 管理控制台 V1：`admin_token` 留空时首次启动自动生成并写回配置（启动日志打印完整地址），
   手机浏览器走 Tailscale 也能打开 `/console`；能看设备状态、增删 QQ 白名单（chips 交互）、一键急停清队列
 - 控制台接口：`/admin/state`、`/admin/config`（只改白名单，返回落盘回读值）、`/admin/stop`；
   鉴权 `X-Admin-Token` 或 `?k=`，错 k 页面 403 / 接口 401，同 IP 失败 10 次锁 60 秒（429）
 - 白名单改动就地重建 `SafetyPolicy` 并写 `kind="admin"` 审计，不需要重载插件；`admin_token: "off"` 时四个路由完全不注册
+- 控制台视觉 V1/V1.2：从深色夜空改成**明色调「樱花晴空」**——真实照片背景（Unsplash License，
+  桌面 `bg-wide.jpg` 1600×1067 / 窄屏 `bg-tall.jpg` 1000×1333）+ 白色玻璃卡片 + 深玫瑰渐变标题；
+  新增只读路由 `GET /console-assets/{name}`（只放行上面两个文件名），CSP 补 `img-src 'self'`
+- `/console` 在本机浏览器打开且没带 `k` 时 **302 自动补上密钥**（`_is_loopback` 判 127.0.0.1/::1/::ffff:127.0.0.1），
+  别的机器访问照旧 403，密钥不外泄
+- 两套白名单语义分离：新增 `@filter.on_llm_request()` 钩子 `_hide_tools_for_outsiders`，
+  不在「QQ 号白名单」里的人本次请求里拿不到任何 `phone_*` 工具——**照样能找 AI 聊天，只是不能遥控手机**
 
 ### 安全
 - 敏感截图二次校验：截图后用手机回报的**真实前台包名 + UI 文字**再查一次，命中直接丢弃，
@@ -38,6 +43,8 @@
 - `/result` 的 `ok` 必须是严格布尔；`"false"` / `0` / `null` 一律 400，不再 `bool()` 兜底当成功
 
 ### 修复
+- 控制台白名单 chips 每 5 秒重绘一次（入场动画重播、看着像闪）→ 列表没变就不重建 DOM
+- 控制台长页下半屏发白：去掉 `background-attachment: fixed`
 - 冷启动不再误判在线：`_last_heartbeat` 改用 `None` 哨兵，收到第一次心跳前 `online` 恒为 False
 - `TaskTimeout` 文案明确「手机端可能已经开始执行了」，避免模型自动重试写操作；迟到结果被丢弃时记日志
 - `/poll` 的 `since` 语义写清：投递即出队（at-most-once），`since` 只作游标、不参与回放
@@ -53,10 +60,10 @@
 
 ### 测试
 - `smoke_test.py` 27 → 35 项：严格 bool `/result`、冷启动、超时文案、`/debug/submit` 404、healthz 鉴权差异
-- `live_server.py` 20 → 46 项：截图 TOCTOU、UI 关键词、中文名黑名单、写操作门槛、overlay 透传、
-  `open_app` 诊断、坐标越界、`/debug/submit` 200、非 ASCII token、冷启动
+- `live_server.py` 20 → **48** 项：截图 TOCTOU、UI 关键词、中文名黑名单、写操作门槛、overlay 透传、
+  `open_app` 诊断、坐标越界、`/debug/submit` 200、非 ASCII token、冷启动、两套白名单分离（保留/摘掉 `phone_*`）
 - 新增 `tools/check_es5.py`：扫 `phone/*.js` 里禁止的 ES6 语法
-- 新增 `tests/admin_console_test.py`（40 项）：鉴权/防爆破/白名单增删/急停清队列/自动生成 token/`off` 全 404
+- 新增 `tests/admin_console_test.py`（**41** 项）：鉴权/防爆破/白名单增删/急停清队列/自动生成 token/`off` 全 404/本机 302 补密钥
 
 ### CI
 - `astrbot` 集成测试由非阻塞改为阻塞

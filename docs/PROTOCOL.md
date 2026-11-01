@@ -35,7 +35,7 @@ token 在插件配置里设置，手机脚本顶部 `TOKEN` 必须一致。用 `
   "screen_capture": true,
   "overlay": true,
   "overlay_note": "ok(WindowManager)",
-  "agent_version": "0.2.0",
+  "agent_version": "0.3.0",
   "protocol": 1
 }
 ```

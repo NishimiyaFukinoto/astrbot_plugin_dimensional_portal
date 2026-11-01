@@ -171,7 +171,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 | 项目 | 状态 | 建议 |
 | --- | --- | --- |
 | `debug_token` | ✅ 已清空 | `/debug/submit` 已关闭（POST 返回 404） |
-| `AGENT_VERSION` | ✅ 0.2.0 | 与 `plugin/metadata.yaml` 的版本号保持一致 |
+| `AGENT_VERSION` | ✅ 0.3.0 | 与 `plugin/metadata.yaml` 的版本号保持一致 |
 | 工作区残留 `data/cmd_config.json`、`data/t2i_templates/` | ✅ 已忽略 | `.gitignore` 排除了 `data/`，不影响提交 |
 | `tools/dash.py` 面板端口写死 `6185` | ✅ 已修 | 改成 `ASTRBOT_DASH_PORT`，实例目录走 `ASTRBOT_INSTANCE` 或自动发现 |
 
@@ -185,7 +185,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 | 许可证 | ✅ | MIT（`LICENSE`，署名 `次元门`，可自行改） |
 | 忽略规则 | ✅ | `.gitignore`（`tmp/`、`data/`、`__pycache__`、截图）+ `.gitattributes`（统一 LF） |
 | README 开源化 | ✅ | 依赖与兼容性、安全须知、免责声明、致谢、License |
-| 版本号 | ✅ | 插件与手机脚本统一 `0.2.0` |
+| 版本号 | ✅ | 插件与手机脚本统一 `0.3.0` |
 | 仓库地址 | ✅ 已填 | `https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal` |
 
 ## 5. ⚠️ 平台边界（不是 bug，改不了）
