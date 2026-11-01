@@ -222,6 +222,12 @@ class _ConsoleAdapter:
         """白名单 + 安全策略；未知字段忽略，越界直接 ValueError（HTTP 400）。"""
         plugin = self.plugin
         change: dict[str, Any] = {}
+        # 前端保存时会提交整份策略，这里记下改之前的值，最后只把真正变动的写进审计
+        before: dict[str, Any] = {
+            "allowed_user_ids": _split_ids(plugin.config.get("allowed_user_ids")),
+            **{key: plugin.config.get(key) for key in _EDITABLE_INTS},
+            **{key: plugin.config.get(key) for key in _EDITABLE_BOOLS},
+        }
 
         if "allowed_user_ids" in payload:
             ids = list(dict.fromkeys(_split_ids(payload.get("allowed_user_ids"))))
@@ -254,6 +260,7 @@ class _ConsoleAdapter:
             plugin.config[key] = value
             change[key] = value
 
+        change = {key: value for key, value in change.items() if before.get(key) != value}
         if not change:
             return self.snapshot()["config"]
 
