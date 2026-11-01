@@ -16,6 +16,7 @@ import logging
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from aiohttp import web
 
@@ -207,6 +208,11 @@ class PhoneBridgeServer:
         peer = request.transport.get_extra_info("peername") if request.transport else None
         return peer[0] if peer else "-"
 
+    @classmethod
+    def _is_loopback(cls, request: web.Request) -> bool:
+        """是不是本机来的请求（127.0.0.1 / ::1）。"""
+        return cls._client_ip(request) in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+
     def _deny(self, request: web.Request, reason: str) -> web.Response:
         log.warning(
             "[dimensional-portal] 拒绝 %s %s from %s：%s",
@@ -359,6 +365,10 @@ class PhoneBridgeServer:
             log.warning("[dimensional-portal] 管理控制台尝试过多 from %s", ip)
             return web.Response(status=429, text="Too Many Requests")
         if not self._admin_authorized(request):
+            # 「打开控制台」这种链接里没有 k：只对本机（回环地址）自动补上，
+            # 免得用户还得去日志里抄一长串密钥；外网/局域网访问照旧 403。
+            if not (request.query.get("k") or "").strip() and self._is_loopback(request):
+                raise web.HTTPFound(f"/console?k={quote(self.admin_token, safe='')}")
             self._admin_fail(ip)
             log.warning("[dimensional-portal] 管理控制台鉴权失败 from %s", ip)
             return web.Response(status=403, text="Forbidden")

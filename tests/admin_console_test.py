@@ -119,6 +119,14 @@ async def main() -> int:
             status, body = await _get(session, f"{base}/console?k={ADMIN}")
             live.check("控制台正确 k → 200", status == 200, f"status={status}")
             live.check("返回单文件 HTML", "<!DOCTYPE html>" in body and "QQ 白名单" in body)
+            resp = await session.get(f"{base}/console", allow_redirects=False)
+            loc = resp.headers.get("Location", "")
+            await resp.release()
+            live.check(
+                "无 k 的本机访问 → 302 自动带上密钥",
+                resp.status == 302 and f"k={ADMIN}" in loc,
+                f"status={resp.status} loc={loc[:60]}",
+            )
             live.check(
                 "页面零外部请求",
                 "<script src=" not in body and "https://" not in body and "<link " not in body,

@@ -226,11 +226,13 @@ V1 只做三件事：看设备状态、增删 QQ 白名单、急停清队列。�
 
 - 开关：插件配置 `admin_token`
   - 留空 → 首次启动自动生成 `secrets.token_urlsafe(24)` 并写回配置，日志打印
-    `[dimensional-portal] 管理控制台：http://<IP>:8765/console?k=<token>`
-  - 填 `off` → 四个路由**完全不注册**（访问全是 404）
+    `[dimensional-portal] 管理控制台：http://<IP>:8765/console?k=<token>`  - 填 `off` → 四个路由**完全不注册**（访问全是 404）
   - 填其它值 → 用它当密钥
 - 鉴权：`X-Admin-Token` 头，或查询串 `?k=`；`hmac.compare_digest` 比较。
   控制台页面错 `k` 回 **403**（不返回页面正文），JSON 接口错 token 回 **401** `{"ok":false,"error":"unauthorized"}`。
+- 本机便捷入口：`GET /console` 不带 `k` 且来源是回环地址（`127.0.0.1` / `::1`）时回 **302** 自动跳到
+  `/console?k=<admin_token>`——配置页里的「打开控制台」链接就靠这个，用户不用手抄密钥。
+  非回环来源不带 `k` 一律 **403**，所以密钥不会因为一条链接被外网拿到。
 - 防爆破：同一 IP 60 秒内失败满 10 次，之后统一回 **429**，锁 60 秒（内存计数，重启清零）。
 - 页面：`GET /console` 是单文件 HTML（CSS/JS 全内嵌，零外部请求），移动端可直接打开；
   每 5 秒轮询一次 `/admin/state`。
