@@ -42,7 +42,7 @@ def _find_instance() -> Path | None:
 
 INSTANCE = _find_instance()
 CORE = (INSTANCE / "core") if INSTANCE else None
-PLUGIN = Path(__file__).resolve().parents[1] / "plugin"
+PLUGIN = Path(__file__).resolve().parents[1]
 
 if CORE is None:
     print("[提示] 没找到本地 AstrBot 实例，改为使用当前环境已安装的 astrbot 包")

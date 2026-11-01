@@ -1,7 +1,8 @@
 """打一个可以直接在 AstrBot WebUI「导入压缩包」的插件 zip。
 
 产物：dist/astrbot_plugin_dimensional_portal.zip
-      zip 内只有一层目录 astrbot_plugin_dimensional_portal/，里面是 plugin/ 的内容
+      zip 内只有一层目录 astrbot_plugin_dimensional_portal/，里面是插件本体（仓库根目录的
+      main.py、metadata.yaml、_conf_schema.json、bridge/、safety/）
       （main.py、metadata.yaml、_conf_schema.json、bridge/、safety/），外加：
         - logo.png                ← 来自 assets/logo.png（放在插件根，插件列表里显示）
         - phone/dimensional_portal_agent.js ← 手机端脚本（保持占位符版本，方便用户自己改地址/token）
@@ -28,12 +29,23 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PLUGIN_DIR = ROOT / "plugin"
+PLUGIN_DIR = ROOT  # 插件本体就在仓库根目录
 ASSETS_LOGO = ROOT / "assets" / "logo.png"
 PHONE_SCRIPT = ROOT / "phone" / "dimensional_portal_agent.js"
 DIST_DIR = ROOT / "dist"
 NAME = "astrbot_plugin_dimensional_portal"
 SKIP_DIRS = {"__pycache__", "data", ".git"}
+# 只收插件本体的目录/文件，docs、tests、tools、phone、assets、tmp、dist 一律不进 zip。
+INCLUDE_DIRS = {"bridge", "safety"}
+INCLUDE_FILES = {
+    "main.py",
+    "metadata.yaml",
+    "_conf_schema.json",
+    "requirements.txt",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+}
 SKIP_SUFFIXES = {".pyc", ".pyo"}
 
 
@@ -44,7 +56,7 @@ def read_version() -> str:
 
 
 def build_zip(out: Path) -> list[str]:
-    """写 zip，返回 namelist。plugin/ 里的文件 + logo.png + phone/ 脚本。"""
+    """写 zip，返回 namelist。插件本体 + logo.png + phone/ 脚本。"""
     entries: list[tuple[Path, str]] = []
     for path in sorted(PLUGIN_DIR.rglob("*")):
         if any(part in SKIP_DIRS for part in path.parts):
@@ -53,9 +65,16 @@ def build_zip(out: Path) -> list[str]:
             continue
         if path.suffix in SKIP_SUFFIXES or path.name == "audit.jsonl":
             continue
-        entries.append((path, Path(NAME, path.relative_to(PLUGIN_DIR)).as_posix()))
+        rel = path.relative_to(PLUGIN_DIR)
+        top = rel.parts[0]
+        if len(rel.parts) == 1:
+            if top not in INCLUDE_FILES:
+                continue
+        elif top not in INCLUDE_DIRS:
+            continue
+        entries.append((path, Path(NAME, rel.as_posix())))
 
-    # logo 和手机端脚本不在 plugin/ 里，单独补进插件根目录。
+    # logo 在 assets/、手机端脚本在 phone/，单独补进插件根目录。
     if ASSETS_LOGO.is_file():
         entries.append((ASSETS_LOGO, Path(NAME, "logo.png").as_posix()))
     else:

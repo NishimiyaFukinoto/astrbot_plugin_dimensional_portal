@@ -140,7 +140,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 - `debug_token` 已清空（2026-10-31 22:56），`/debug/submit` 现在返回 404；需要真机回归时再临时填一个值并重载插件。
 
 ### P1 体验补强
-- **管理控制台 V1 已完成**（`plugin/bridge/console.html` + `/console` `/admin/state` `/admin/config` `/admin/stop`）：
+- **管理控制台 V1 已完成**（`bridge/console.html` + `/console` `/admin/state` `/admin/config` `/admin/stop`）：
   浏览器里看手机状态、增删 QQ 白名单（改完即时生效，无需重载）、急停；`admin_token` 留空时首次启动自动生成并写盘，填 `off` 整块关闭。
   V2 待做：安全策略开关（限流 / 敏感截图 / 写操作 / 超时）与审计列表。
 - **锁屏唤醒**：息屏时截图全黑、点击落锁屏（见 §5）。
@@ -171,7 +171,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 | 项目 | 状态 | 建议 |
 | --- | --- | --- |
 | `debug_token` | ✅ 已清空 | `/debug/submit` 已关闭（POST 返回 404） |
-| `AGENT_VERSION` | ✅ 0.3.0 | 与 `plugin/metadata.yaml` 的版本号保持一致 |
+| `AGENT_VERSION` | ✅ 0.3.0 | 与 `metadata.yaml` 的版本号保持一致 |
 | 工作区残留 `data/cmd_config.json`、`data/t2i_templates/` | ✅ 已忽略 | `.gitignore` 排除了 `data/`，不影响提交 |
 | `tools/dash.py` 面板端口写死 `6185` | ✅ 已修 | 改成 `ASTRBOT_DASH_PORT`，实例目录走 `ASTRBOT_INSTANCE` 或自动发现 |
 
@@ -224,7 +224,7 @@ QQ 上的「大肥鱼」通过 AstrBot 里的大模型，远程操控一台 Andr
 
 | 部分 | 行数 |
 | --- | --- |
-| 插件 Python（`plugin/`） | 1450 |
+| 插件 Python（``） | 1450 |
 | 手机脚本（`phone/dimensional_portal_agent.js`） | 1116 |
 | 测试（`tests/`，3 个脚本） | 664 |
 | 调试工具（`tools/`，5 个脚本） | 386 |

@@ -2,6 +2,14 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.4.1] - 2026-11-01
+
+### 变更
+
+- **仓库改成插件市场标准布局**：插件本体从 `plugin/` 提到仓库根目录（`main.py`、`metadata.yaml`、`_conf_schema.json`、`bridge/`、`safety/`）。AstrBot 插件市场按「仓库根目录 = 插件目录」解析并打包，原来的子目录结构会导致市场解析失败；功能与文件内容无改动。
+- 打包脚本改为白名单收集（只收插件本体 + `logo.png` + 手机脚本），`docs/`、`tests/`、`tools/`、`phone/` 不进 zip。
+- CI 的 `compileall` / `ruff` 目标同步到新路径。
+
 ## [0.4.0] - 2026-11-01
 
 ### 新增

@@ -1,7 +1,7 @@
 # 通信协议 v1
 
 电脑（插件）和手机（AutoX.js 脚本）之间的全部约定。改任何一边都要同步这里和
-`plugin/bridge/protocol.py`、`phone/dimensional_portal_agent.js` 里的 `AGENT_VERSION` / `PROTOCOL_VERSION`。
+`bridge/protocol.py`、`phone/dimensional_portal_agent.js` 里的 `AGENT_VERSION` / `PROTOCOL_VERSION`。
 
 ## 角色
 

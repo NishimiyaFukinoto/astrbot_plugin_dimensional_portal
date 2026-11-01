@@ -25,13 +25,13 @@ QQ ←→ 腾讯 ←→ NapCat ←→ AstrBot ←→ 本插件 (aiohttp :8765) �
 
 |路径|作用|
 |-|-|
-|`plugin/main.py`|插件入口：`class DimensionalPortalPhoneBridge(Star)`，起 HTTP 服务 + 注册 **11 个** `@filter.llm\_tool`|
-|`plugin/bridge/protocol.py`|协议常量（动作名、任务 id、JSON 工具）|
-|`plugin/bridge/hub.py`|任务队列 + 长轮询唤醒 + 心跳/在线状态机|
-|`plugin/bridge/server.py`|aiohttp 四个端点 `/hb` `/poll` `/result` `/healthz`（+ 可选 `/debug/submit`、可选控制台 `/console` `/admin/\*`）|
-|`plugin/bridge/console.html`|管理控制台单文件页面（内嵌 CSS/JS、零外部请求、移动端可用）|
-|`plugin/safety/policy.py`|白名单、限流、包名黑名单、敏感界面、审计日志|
-|`plugin/\_conf\_schema.json`|WebUI 里的 15 个配置项|
+|`main.py`|插件入口：`class DimensionalPortalPhoneBridge(Star)`，起 HTTP 服务 + 注册 **11 个** `@filter.llm\_tool`|
+|`bridge/protocol.py`|协议常量（动作名、任务 id、JSON 工具）|
+|`bridge/hub.py`|任务队列 + 长轮询唤醒 + 心跳/在线状态机|
+|`bridge/server.py`|aiohttp 四个端点 `/hb` `/poll` `/result` `/healthz`（+ 可选 `/debug/submit`、可选控制台 `/console` `/admin/\*`）|
+|`bridge/console.html`|管理控制台单文件页面（内嵌 CSS/JS、零外部请求、移动端可用）|
+|`safety/policy.py`|白名单、限流、包名黑名单、敏感界面、审计日志|
+|`_conf\_schema.json`|WebUI 里的 15 个配置项|
 |`phone/dimensional\_portal\_agent.js`|**手机端 AutoX.js 脚本**（纯 ES5，Rhino 可跑；仓库里 `BASES`/`TOKEN` 是占位符）|
 |`tests/smoke\_test.py`|协议层冒烟，**35 项**，不需要 AstrBot、不需要真机|
 |`tests/live\_server.py`|真插件类 + 真 aiohttp + 假手机，直接调工具函数，**48 项**（必须用实例 venv python）|
@@ -79,7 +79,7 @@ python tools/check\_es5.py
 python tools/make\_release\_zip.py
 
 # 部署到 AstrBot 实例（先停核心再拷，避免配置被内存覆盖）
-cp -r plugin/. "<实例>/core/data/plugins/astrbot\_plugin\_dimensional\_portal/"
+cp -r main.py metadata.yaml _conf\_schema.json bridge safety "<实例>/core/data/plugins/astrbot\_plugin\_dimensional\_portal/"
 
 # 重载插件（面板端口每次由启动器随机分配，先查）
 python tools/reload\_plugin.py

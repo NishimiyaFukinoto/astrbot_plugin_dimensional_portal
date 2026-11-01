@@ -31,7 +31,7 @@ desc: |
 
   安装步骤见仓库 [docs/INSTALL.md](https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/blob/main/docs/INSTALL.md)，
   协议说明见 [docs/PROTOCOL.md](https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal/blob/main/docs/PROTOCOL.md)。
-version: 0.4.0
+version: 0.4.1
 author: 西宫吹乃
 repo: https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal
 astrbot_version: ">=4.29.0"

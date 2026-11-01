@@ -94,7 +94,7 @@ QQ  ←→  腾讯  ←→  NapCat  ←→  AstrBot  ←→  本插件 (aiohttp 
 https://github.com/NishimiyaFukinoto/astrbot_plugin_dimensional_portal
 ```
 
-**方式 D**：手动把本仓库的 `plugin/` 整个目录拷到：
+**方式 D**：手动把本仓库的 `` 整个目录拷到：
 
 ```
 <AstrBot 实例目录>/core/data/plugins/astrbot_plugin_dimensional_portal/
@@ -326,7 +326,7 @@ vivo/iQOO 还可能在第一次弹「应用跳转」确认框，点「始终打�
 **提 PR**
 
 - 用 [PR 模板](.github/pull_request_template.md)，写清改动范围、验证方式、是否影响协议。
-- 改协议（`plugin/bridge/protocol.py` 或动作表）时，请同步更新 `docs/PROTOCOL.md` 与手机脚本。
+- 改协议（`bridge/protocol.py` 或动作表）时，请同步更新 `docs/PROTOCOL.md` 与手机脚本。
 - 提交前请跑一遍 [开发与测试](#开发与测试) 里的三套测试。
 
 ## 开发与测试

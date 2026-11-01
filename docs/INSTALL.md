@@ -49,7 +49,7 @@ var TOKEN = "<你的手机端 token>";         // 必须和插件配置里的 to
 
 ## 2. 电脑端：装插件
 
-把本仓库的 `plugin/` 整个目录拷到 AstrBot 的插件目录，并**改名为插件名**：
+把本仓库的 `` 整个目录拷到 AstrBot 的插件目录，并**改名为插件名**：
 
 ```
 <AstrBot 实例目录>\core\data\plugins\astrbot_plugin_dimensional_portal\

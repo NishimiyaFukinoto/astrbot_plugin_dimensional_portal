@@ -17,7 +17,8 @@ import aiohttp
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-PLUGIN_DIR = Path(__file__).resolve().parents[1] / "plugin"
+# 仓库根目录就是插件目录（插件市场要求根级 metadata.yaml）
+PLUGIN_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PLUGIN_DIR))
 
 from bridge.hub import DeviceHub, DeviceOffline, TaskTimeout  # noqa: E402

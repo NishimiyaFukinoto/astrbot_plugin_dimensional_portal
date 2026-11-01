@@ -14,7 +14,7 @@
 | 安全策略开关（敏感截图、写操作、限流、超时） | ✅ V2 已上线（`/admin/config` 扩到 7 个字段） |
 | 审计日志列表（分页加载） | ✅ V2 已上线（`GET /admin/audit?limit&offset`） |
 
-### V1.2 视觉要点（`plugin/bridge/console.html` + `plugin/bridge/assets/`）
+### V1.2 视觉要点（`bridge/console.html` + `bridge/assets/`）
 
 - 背景：Unsplash 实拍（Unsplash License）——桌面用横构图「樱花与晴空」`bg-wide.jpg`（1600×1067，205 KB），
   窄屏（`@media (max-aspect-ratio: 3/4)`）换竖构图「蓝天下的樱树」`bg-tall.jpg`（1000×1333，154 KB）；
