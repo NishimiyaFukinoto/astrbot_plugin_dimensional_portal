@@ -1,7 +1,7 @@
 # AGENTS.md —— 项目交接说明（给下一个会话 / 给未来的自己）
 
 > 目的：\*\*新开一个会话说「读 AGENTS.md 继续」，就能立刻接上\*\*，不用重新考古。
-> 最后更新：2026-11-01　当前版本：\*\*0.4.0\*\*（M0 + M1 已完成，M2 提前完成，控制台 V2 已完成，M3 起暂停）
+> 最后更新：2026-11-01　当前版本：\*\*0.4.1\*\*（M0 + M1 已完成，M2 提前完成，控制台 V2 已完成，已提交插件市场审核，M3 起暂停）
 
 \---
 
@@ -46,19 +46,29 @@ QQ ←→ 腾讯 ←→ NapCat ←→ AstrBot ←→ 本插件 (aiohttp :8765) �
 |`docs/INSTALL.md`|安装、权限、排错|
 |`docs/PLAN.md`|里程碑、决策记录、风险、调试手册|
 |`docs/STATUS.md`|进度大纲（已完成 / 待办 P0–P6）|
+|`docs/MARKET.md`|插件市场上架记录：仓库结构约束、字段决定表、发版流程、审核机制|
 |`docs/CONSOLE\_PLAN.md`|管理控制台的执行方案与实现记录（V1 / V1.2 视觉 / V2 功能均已实现）|
 
 ## 3\. 当前状态（2026-11-01）
 
 * 仓库：`https://github.com/NishimiyaFukinoto/astrbot\_plugin\_dimensional\_portal`（public，main）
 * CI：`.github/workflows/tests.yml` —— `smoke` 必跑，`astrbot` 集成非阻塞；最近一次 **success**
-* Release：`v0.3.0` 已发布（正文 + 附件 `astrbot\_plugin\_dimensional\_portal.zip`，406 KB，可被 WebUI「导入压缩包」直接装）；`v0.4.0`（控制台 V2）代码已就绪，Release 尚未发布
+* Release：`v0.4.0`（控制台 V2）与 `v0.4.1`（市场布局）均已发布，附件由 `release-asset` 工作流自动挂（约 410–500 KB，可被 WebUI「导入压缩包」直接装）
 * 对外呈现：logo、6 徽章、335 行 README、10 个 topics、issue/PR 模板、CHANGELOG
 * 部署：**已部署**到 AstrBot 实例的 `core/data/plugins/astrbot\_plugin\_dimensional\_portal/`
 * 手机：**离线**，而且手机里跑的还是改名前的旧脚本 `dafeiyu\_agent.js`（指向旧地址）；需要重新推 `dimensional\_portal\_agent.js` 并重启
 * 管理控制台：**V2 已实现**（`admin\_token` 自动生成、`/console` 看状态/改白名单/开关安全策略/翻审计日志/急停，错 k 403、失败 10 次锁 60 秒；`/admin/audit` 分页，`/admin/state` 带 `editable` 区间）；
 
 * 未做：M3 相机、M4 下载装 APK、M5 保活加固
+
+## 3.1 插件市场上架（2026-11-01）
+
+* 仓库已改成**插件市场标准布局**：`main.py` / `metadata.yaml` 直接在仓库根目录（原来在 `plugin/` 子目录，
+  会导致市场发布页「解析」稳定 502）。
+* AstrBot Cloud 账号 `nishimiyafukinoto`，GitHub App `AstrBot Cloud` 已装。
+* `v0.4.1` 已提交审核，状态 **Waiting（等待安全检查）**；后台：
+  <https://cloud.astrbot.app/plugin/NishimiyaFukinoto/astrbot_plugin_dimensional_portal?tab=versions>
+* 分类 `效率`（`metadata.yaml` 里的 `category` 字段决定）；发版流程与字段说明见 `docs/MARKET.md`。
 
 ## 4\. 五分钟跑起来
 
@@ -147,6 +157,7 @@ python tools/dbg.py '{"action":"open\_app","params":{"package":"com.tencent.mm"}
 |`git push` 报 `unable to fork`|workspace-write 沙箱不给 fork ssh；用 `sandbox\_permissions=danger-full-access` 重试|
 |ego 脚本读文件 ENOENT|ego 的 nodejs `cwd` 是 ego 安装目录；一律写绝对路径，且必须用 `import`（ESM）不能用 `require`|
 |重复提交把作者身份搞错|提交前确认 `git config user.name/user.email`；`noreply` 邮箱会被 GitHub 匹配到**别人**的账号|
+|插件市场发布页「解析」一直 502（`origin_bad_gateway`）|**仓库结构**问题：市场按「仓库根目录 = 插件目录」解析并打包，根目录必须有 `main.py` + `metadata.yaml`；放子目录（如 `plugin/`）会解析失败。改成根目录布局后立刻成功|
 |NapCat 每秒重连报错、6199 没有监听、AstrBot 日志 `\[WinError 10013]`|Windows 的「动态端口保留」（winnat / Hyper-V / WSL2 / Docker）吃掉了该端口。`netsh int ipv4 show excludedportrange protocol=tcp` 看保留区间；修法：换到区间外的端口（AstrBot `platform\[0].ws\_reverse\_port` + NapCat `onebot11\_<QQ>.json` 的 `websocketClients\[0].url` **两边一起改**），或管理员 `net stop winnat` → `net start winnat`。完整复盘见 `docs/INCIDENT-2026-11-01-port-conflict.md`|
 |截图全黑|手机息屏；先唤醒或开「充电时不锁屏」|
 |`tests/live\_server.py` 报 `ModuleNotFoundError: No module named 'deprecated'`|用了系统 python 跑；脚本会把实例 `core/` 塞进 `sys.path` 但系统 python 没装 AstrBot 依赖。改用实例 venv：`/c/Users/YUZURU/.astrbot\_launcher/instances/9040990f-.../venv/Scripts/python.exe tests/live\_server.py`|
